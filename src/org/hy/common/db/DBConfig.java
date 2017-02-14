@@ -75,7 +75,7 @@ public class DBConfig extends ConfigFileObject
 				Object v_Security = null;
 				
 				try
-				{
+				{ 
 					Class<?> v_ClassSecurity  = Class.forName("org.hy.common.security.Security");
 					Method   v_MethodSecurity = v_ClassSecurity.getDeclaredMethod("getInstance");
 					
