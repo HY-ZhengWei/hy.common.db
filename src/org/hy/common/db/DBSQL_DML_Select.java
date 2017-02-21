@@ -46,4 +46,11 @@ public class DBSQL_DML_Select implements DBSQL_DML
 		return null;
 	}
 	
+	
+	
+	public List<DBSQL_SelectSegment> getSsList()
+	{
+	    return this.ssList;
+	}
+	
 }
