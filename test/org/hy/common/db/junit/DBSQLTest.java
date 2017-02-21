@@ -4,7 +4,7 @@ import java.util.Hashtable;
 import java.util.Map;
 
 import org.hy.common.Date;
-import org.hy.common.db.DBSQL_V1;
+import org.hy.common.db.DBSQL;
 
 
 
@@ -92,7 +92,7 @@ public class DBSQLTest
 		v_SQL.append("   AND  CardNo    = ':CardNo'");
 		v_SQL.append("   AND  CityCode  = 0910");
 		
-		DBSQL_V1        v_DBSQL = new DBSQL_V1(v_SQL.toString());
+		DBSQL        v_DBSQL = new DBSQL(v_SQL.toString());
 		DBSQLTest    v_Test  = new DBSQLTest();
 		
 		v_Test.setBeginTime(new Date());
@@ -102,7 +102,6 @@ public class DBSQLTest
 		
 		System.out.println(v_DBSQL.getSQL(v_Test));
 		System.out.println(v_DBSQL.getSQLType());
-		if ( 1==1 ) return;
 		
 		
 		
