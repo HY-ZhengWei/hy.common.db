@@ -133,13 +133,13 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 			}
 			catch (Exception exce)
 			{
-			    System.out.println("\n" + Date.getNowTime().getFull() + " 编号：" + this.validDSIndex + " 的数据库连接池失效。尝试获取下一个数据库连接池中的连接。");
+			    System.err.println("\n" + Date.getNowTime().getFull() + " 编号：" + this.validDSIndex + " 的数据库连接池失效。尝试获取下一个数据库连接池中的连接。");
 			}
 		}
 		
 		if ( !this.isRunReConn )
 		{ 
-		    System.out.println("\n" + Date.getNowTime().getFull() + " 所有的数据库连接池失效，系统将等待 10秒后尝试重新连接。");
+		    System.err.println("\n" + Date.getNowTime().getFull() + " 所有的数据库连接池失效，系统将等待 10秒后尝试重新连接。");
 		    
 		    this.isRunReConn  = true;  // 防止重复执行
 		    this.validDSIndex = Integer.MAX_VALUE;
