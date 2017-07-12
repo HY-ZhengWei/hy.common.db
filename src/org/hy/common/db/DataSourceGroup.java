@@ -71,6 +71,9 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
     
     /** 是否出现异常 */
     private boolean            isException;
+    
+    /** 最后一次正常连接的时间 */
+    private Date               lastConnTime;
 	
 	
 	
@@ -81,6 +84,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 		this.uuid         = StringHelp.getUUID();
 		this.isRunReConn  = false;
 		this.isException  = false;
+		this.lastConnTime = null;
 	}
 	
 	
@@ -136,7 +140,8 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 			{
 			    Connection v_Conn = this.dataSources.get(this.validDSIndex).getConnection();
 			    
-			    this.isException = false;
+			    this.isException  = false;
+			    this.lastConnTime = new Date();
 			    
 			    return v_Conn;
 			}
@@ -294,6 +299,16 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
     }
 
 
+    
+    /**
+     * 获取：最后一次正常连接的时间
+     */
+    public Date getLastConnTime()
+    {
+        return lastConnTime;
+    }
+
+
 
     public String getObjectID()
     {
@@ -398,7 +413,16 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
     {
         StringBuilder v_Buffer = new StringBuilder();
         
-        v_Buffer.append(this.isException ? "异常" : "正常");
+        if ( this.lastConnTime == null )
+        {
+            v_Buffer.append("0000-00-00 00:00:00");
+        }
+        else
+        {
+            v_Buffer.append(this.lastConnTime.getFull());
+        }
+        
+        v_Buffer.append("  ").append(this.isException ? "异常" : "正常");
         v_Buffer.append("  DataSourceSize:").append(this.dataSources.size());
         
         return v_Buffer.toString();
