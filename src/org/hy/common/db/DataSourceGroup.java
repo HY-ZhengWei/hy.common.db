@@ -27,6 +27,7 @@ import org.hy.common.StringHelp;
  *                                 这三类信息，只访问数据库一次，一但获取到，就一直保存在对象中。
  *              v4.0   2016-03-02  添加：主备数据库都出现异常时，暂停一小段时间(10秒)后，才允许尝试重新获取数据库连接
  *              v4.1   2016-12-22  修改：allowReconnection()改为public，否则无法在线程中调用成功，也就无法实现10秒后尝试重新获取数据库连接的功能。
+ *              v5.0   2017-07-12  添加：isException() 异常状态标记，可通过 http://IP/WebName/analyses/analyseObject?xid=DSG* 页面全局查看所有的数据库连接池组信息。
  */
 public final class DataSourceGroup implements Comparable<DataSourceGroup>
 {
@@ -67,6 +68,9 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
     
     /** 是否执行了允许重新获取数据库连接的方法（主要用于主备数据库都出现异常时） */
     private boolean            isRunReConn;
+    
+    /** 是否出现异常 */
+    private boolean            isException;
 	
 	
 	
@@ -76,6 +80,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 		this.validDSIndex = -1;
 		this.uuid         = StringHelp.getUUID();
 		this.isRunReConn  = false;
+		this.isException  = false;
 	}
 	
 	
@@ -129,10 +134,15 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 		{
 			try
 			{
-				return this.dataSources.get(this.validDSIndex).getConnection();
+			    Connection v_Conn = this.dataSources.get(this.validDSIndex).getConnection();
+			    
+			    this.isException = false;
+			    
+			    return v_Conn;
 			}
 			catch (Exception exce)
 			{
+			    this.isException = true;
 			    System.err.println("\n" + Date.getNowTime().getFull() + " 编号：" + this.validDSIndex + " 的数据库连接池失效。尝试获取下一个数据库连接池中的连接。");
 			}
 		}
@@ -275,7 +285,17 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 	
 	
 	
-	public String getObjectID()
+    /**
+     * 获取：是否出现异常
+     */
+    public boolean isException()
+    {
+        return isException;
+    }
+
+
+
+    public String getObjectID()
     {
         return this.uuid;
     }
@@ -359,6 +379,30 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
             return this.getObjectID().compareTo(i_Other.getObjectID());
         }
 	}
+
+
+
+    /**
+     * 显示基本信息
+     *
+     * @author      ZhengWei(HY)
+     * @createDate  2017-07-12
+     * @version     v1.0
+     *
+     * @return
+     *
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString()
+    {
+        StringBuilder v_Buffer = new StringBuilder();
+        
+        v_Buffer.append(this.isException ? "异常" : "正常");
+        v_Buffer.append("  DataSourceSize:").append(this.dataSources.size());
+        
+        return v_Buffer.toString();
+    }
 	
 	
 	
