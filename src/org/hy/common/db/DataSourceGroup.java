@@ -132,7 +132,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 	 * 
 	 * @return
 	 */
-	public synchronized Connection getConnection()
+	public synchronized java.sql.Connection getConnection()
 	{
 		int v_Size  = this.dataSources.size();
 		
@@ -215,7 +215,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 	        return;
 	    }
 	    
-	    Connection v_Conn = this.getConnection();
+	    java.sql.Connection v_Conn = this.getConnection();
         try
         {
             DatabaseMetaData v_DBMetaData = v_Conn.getMetaData();
