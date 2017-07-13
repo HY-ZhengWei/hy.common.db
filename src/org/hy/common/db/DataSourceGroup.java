@@ -1,6 +1,5 @@
 package org.hy.common.db;
 
-import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +27,7 @@ import org.hy.common.StringHelp;
  *              v4.0   2016-03-02  添加：主备数据库都出现异常时，暂停一小段时间(10秒)后，才允许尝试重新获取数据库连接
  *              v4.1   2016-12-22  修改：allowReconnection()改为public，否则无法在线程中调用成功，也就无法实现10秒后尝试重新获取数据库连接的功能。
  *              v5.0   2017-07-12  添加：isException() 异常状态标记，可通过 http://IP/WebName/analyses/analyseObject?xid=DSG* 页面全局查看所有的数据库连接池组信息。
+ *                                 添加：统一第三监控接口
  */
 public final class DataSourceGroup implements Comparable<DataSourceGroup>
 {
@@ -69,22 +69,30 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
     /** 是否执行了允许重新获取数据库连接的方法（主要用于主备数据库都出现异常时） */
     private boolean            isRunReConn;
     
-    /** 是否出现异常 */
+    /** 是否出现异常。非连接断连异常也会为true */
     private boolean            isException;
     
     /** 最后一次正常连接的时间 */
-    private Date               lastConnTime;
+    private Date               connLastTime;
+    
+    /** 活动连接数量（不包括连接池中预先初始化的连接数量） */
+    private long               connActiveCount;
+    
+    /** 连接使用峰值（不包括连接池中预先初始化的连接数量） */
+    private long               connMaxUseCount;
 	
 	
 	
 	public DataSourceGroup()
 	{
-		this.dataSources  = new ArrayList<DataSource>();
-		this.validDSIndex = -1;
-		this.uuid         = StringHelp.getUUID();
-		this.isRunReConn  = false;
-		this.isException  = false;
-		this.lastConnTime = null;
+		this.dataSources     = new ArrayList<DataSource>();
+		this.validDSIndex    = -1;
+		this.uuid            = StringHelp.getUUID();
+		this.isRunReConn     = false;
+		this.isException     = false;
+		this.connLastTime    = null;
+		this.connActiveCount = 0;
+		this.connMaxUseCount = 0;
 	}
 	
 	
@@ -138,10 +146,16 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 		{
 			try
 			{
-			    Connection v_Conn = this.dataSources.get(this.validDSIndex).getConnection();
+			    java.sql.Connection v_OutsideConn = this.dataSources.get(this.validDSIndex).getConnection();
+			    Connection          v_Conn        = new Connection(v_OutsideConn ,this);
 			    
+			    this.connActiveCount++;
+			    if ( this.connActiveCount > this.connMaxUseCount )
+			    {
+			        this.connMaxUseCount = this.connActiveCount;
+			    }
 			    this.isException  = false;
-			    this.lastConnTime = new Date();
+			    this.connLastTime = new Date();
 			    
 			    return v_Conn;
 			}
@@ -291,21 +305,33 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 	
 	
     /**
-     * 获取：是否出现异常
+     * 获取：是否出现异常。非连接断连异常也会为true
      */
     public boolean isException()
     {
         return isException;
     }
 
-
     
+    
+    /**
+     * 设置：是否出现异常。非连接断连异常也会为true
+     * 
+     * @param isException 
+     */
+    public void setException(boolean isException)
+    {
+        this.isException = isException;
+    }
+    
+
+
     /**
      * 获取：最后一次正常连接的时间
      */
-    public Date getLastConnTime()
+    public Date getConnLastTime()
     {
-        return lastConnTime;
+        return connLastTime;
     }
 
 
@@ -346,6 +372,39 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
     {
         this.getDBProductInfo();
         return dbProductType;
+    }
+
+
+    
+    /**
+     * 获取：活动连接数量（不包括连接池中预先初始化的连接数量）
+     */
+    public long getConnActiveCount()
+    {
+        return this.connActiveCount;
+    }
+    
+    
+    /**
+     * 连接关闭时触发
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2017-07-13
+     * @version     v1.0
+     *
+     */
+    protected synchronized void connClosed()
+    {
+        this.connActiveCount--;
+    }
+
+    
+    /**
+     * 获取：连接使用峰值（不包括连接池中预先初始化的连接数量）
+     */
+    public long getConnMaxUseCount()
+    {
+        return connMaxUseCount;
     }
 
 
@@ -413,17 +472,20 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
     {
         StringBuilder v_Buffer = new StringBuilder();
         
-        if ( this.lastConnTime == null )
+        v_Buffer.append(this.isException ? "异常" : "正常").append("  ");
+        
+        if ( this.connLastTime == null )
         {
             v_Buffer.append("0000-00-00 00:00:00");
         }
         else
         {
-            v_Buffer.append(this.lastConnTime.getFull());
+            v_Buffer.append(this.connLastTime.getFull());
         }
         
-        v_Buffer.append("  ").append(this.isException ? "异常" : "正常");
-        v_Buffer.append("  DataSourceSize:").append(this.dataSources.size());
+        v_Buffer.append("  连接活动数量:").append(this.connActiveCount);
+        v_Buffer.append("  连接使用峰值:").append(this.connMaxUseCount);
+        v_Buffer.append("  主备连接池数:").append(this.dataSources.size());
         
         return v_Buffer.toString();
     }
