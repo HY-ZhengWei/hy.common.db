@@ -65,6 +65,7 @@ import org.hy.common.MethodReflect;
  *              v5.1  2016-08-09  1. 将数值中的单引号替换成两个单引号。单引号是数据库的字符串两边的限定符。
  *                                   如果占位符对应的数值中也存在单引号，会造成生成的SQL语句无法正确执行。
  *                                   是否替换可通过 this.keyReplace 属性控制。
+ *              v6.0  2017-08-01  1. 添加：安全检查防止SQL注入。
  */
 public class DBSQL
 {
@@ -92,6 +93,9 @@ public class DBSQL
     /** 替换数据库关键字。如，单引号替换成两个单引号。默认为：false，即不替换 */
     private boolean             keyReplace;
     
+    /** 是否进行安全检查，防止SQL注入。默认为：true */
+    private boolean             safeCheck;
+    
     private DBSQLFill           dbSQLFill;
     
     /** 通过分析后的分段SQL信息 */
@@ -111,6 +115,7 @@ public class DBSQL
         this.sqlType     = $DBSQL_TYPE_UNKNOWN;
         this.segments    = new ArrayList<DBSQL_Split>();
         this.preparedSQL = new DBPreparedSQL();
+        this.safeCheck   = true;
         this.setKeyReplace(false);
     }
     
@@ -123,7 +128,8 @@ public class DBSQL
      */
     public DBSQL(String i_SQLText)
     {
-        this.sqlType = $DBSQL_TYPE_UNKNOWN;
+        this.sqlType   = $DBSQL_TYPE_UNKNOWN;
+        this.safeCheck = true;
         this.setSqlText(i_SQLText);
         this.setKeyReplace(false);
     }
@@ -308,7 +314,7 @@ public class DBSQL
                         String        v_PlaceHolder   = v_IterPlaceholders.next();
                         MethodReflect v_MethodReflect = null;
                         /*
-                        在实现全路径的解释功能之前的老方法  ZhengWei(HY) Del 2015-12-10
+                                                在实现全路径的解释功能之前的老方法  ZhengWei(HY) Del 2015-12-10
                         Method        v_Method        = MethodReflect.getGetMethod(i_Obj.getClass() ,v_PlaceHolder ,true);
                         */
                         
@@ -343,8 +349,15 @@ public class DBSQL
                                             
                                             if ( v_MRValue != null )
                                             {
-                                                v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString());
-                                                v_IsReplace = true;
+                                                if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MRValue.toString()) )
+                                                {
+                                                    v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString());
+                                                    v_IsReplace = true;
+                                                }
+                                                else
+                                                {
+                                                    throw new DBSQLSafeException(this.getSqlText());
+                                                }
                                             }
                                             else
                                             {
@@ -359,10 +372,21 @@ public class DBSQL
                                     }
                                     else
                                     {
-                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
-                                        v_ReplaceCount++;
+                                        if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
+                                        {
+                                            v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
+                                            v_ReplaceCount++;
+                                        }
+                                        else
+                                        {
+                                            throw new DBSQLSafeException(this.getSqlText());
+                                        }
                                     }
                                 }
+                            }
+                            catch (DBSQLSafeException exce)
+                            {
+                                throw new RuntimeException(exce.getMessage());
                             }
                             catch (Exception exce)
                             {
@@ -378,7 +402,7 @@ public class DBSQL
                         String        v_PlaceHolder   = v_IterPlaceholders.next();
                         MethodReflect v_MethodReflect = null;
                         /*
-                        在实现全路径的解释功能之前的老方法  ZhengWei(HY) Del 2015-12-10
+                                                在实现全路径的解释功能之前的老方法  ZhengWei(HY) Del 2015-12-10
                         Method        v_Method        = MethodReflect.getGetMethod(i_Obj.getClass() ,v_PlaceHolder ,true);
                         */
                         
@@ -413,13 +437,28 @@ public class DBSQL
                                             
                                             if ( v_MRValue != null )
                                             {
-                                                v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString());
-                                                v_IsReplace = true;
+                                                if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MRValue.toString()) )
+                                                {
+                                                    v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString());
+                                                    v_IsReplace = true;
+                                                }
+                                                else
+                                                {
+                                                    throw new DBSQLSafeException(this.getSqlText());
+                                                }
                                             }
                                             else
                                             {
-                                                v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,Help.toObject(((MethodReflect)v_GetterValue).getReturnType()).toString());
-                                                v_IsReplace = true;
+                                                String v_Value = Help.toObject(((MethodReflect)v_GetterValue).getReturnType()).toString();
+                                                if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_Value) )
+                                                {
+                                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                                    v_IsReplace = true;
+                                                }
+                                                else
+                                                {
+                                                    throw new DBSQLSafeException(this.getSqlText());
+                                                }
                                             }
                                         }
                                         
@@ -430,15 +469,34 @@ public class DBSQL
                                     }
                                     else
                                     {
-                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
-                                        v_ReplaceCount++;
+                                        if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
+                                        {
+                                            v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
+                                            v_ReplaceCount++;
+                                        }
+                                        else
+                                        {
+                                            throw new DBSQLSafeException(this.getSqlText());
+                                        }
                                     }
                                 }
                                 else
                                 {
-                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,Help.toObject(v_MethodReflect.getReturnType()).toString());
-                                    v_ReplaceCount++;
+                                    String v_Value = Help.toObject(v_MethodReflect.getReturnType()).toString();
+                                    if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_Value) )
+                                    {
+                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                        v_ReplaceCount++;
+                                    }
+                                    else
+                                    {
+                                        return "";
+                                    }
                                 }
+                            }
+                            catch (DBSQLSafeException exce)
+                            {
+                                throw new RuntimeException(exce.getMessage());
                             }
                             catch (Exception exce)
                             {
@@ -529,8 +587,15 @@ public class DBSQL
                                         // getter 方法有返回值时
                                         if ( v_GetterValue != null )
                                         {
-                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
-                                            v_IsReplace = true;
+                                            if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
+                                            {
+                                                v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
+                                                v_IsReplace = true;
+                                            }
+                                            else
+                                            {
+                                                throw new DBSQLSafeException(this.getSqlText());
+                                            }
                                         }
                                         else
                                         {
@@ -545,8 +610,15 @@ public class DBSQL
                                 }
                                 else
                                 {
-                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString());
-                                    v_ReplaceCount++;
+                                    if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MapValue.toString()) )
+                                    {
+                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString());
+                                        v_ReplaceCount++;
+                                    }
+                                    else
+                                    {
+                                        return "";
+                                    }
                                 }
                             }
                             else
@@ -558,6 +630,10 @@ public class DBSQL
                                     v_ReplaceCount++;
                                 }
                             }
+                        }
+                        catch (DBSQLSafeException exce)
+                        {
+                            throw new RuntimeException(exce.getMessage());
                         }
                         catch (Exception exce)
                         {
@@ -589,13 +665,28 @@ public class DBSQL
                                         // getter 方法有返回值时
                                         if ( v_GetterValue != null )
                                         {
-                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
-                                            v_IsReplace = true;
+                                            if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
+                                            {
+                                                v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
+                                                v_IsReplace = true;
+                                            }
+                                            else
+                                            {
+                                                throw new DBSQLSafeException(this.getSqlText());
+                                            }
                                         }
                                         else
                                         {
-                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,Help.toObject(((MethodReflect)v_MapValue).getReturnType()).toString());
-                                            v_IsReplace = true;
+                                            String v_Value = Help.toObject(((MethodReflect)v_MapValue).getReturnType()).toString();
+                                            if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_Value) )
+                                            {
+                                                v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_Value);
+                                                v_IsReplace = true;
+                                            }
+                                            else
+                                            {
+                                                throw new DBSQLSafeException(this.getSqlText());
+                                            }
                                         }
                                     }
                                     
@@ -606,8 +697,15 @@ public class DBSQL
                                 }
                                 else
                                 {
-                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString());
-                                    v_ReplaceCount++;
+                                    if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MapValue.toString()) )
+                                    {
+                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString());
+                                        v_ReplaceCount++;
+                                    }
+                                    else
+                                    {
+                                        return "";
+                                    }
                                 }
                             }
                             else
@@ -615,6 +713,10 @@ public class DBSQL
                                 v_Info = this.dbSQLFill.fillSpace(v_Info ,v_PlaceHolder);
                                 v_ReplaceCount++;
                             }
+                        }
+                        catch (DBSQLSafeException exce)
+                        {
+                            throw new RuntimeException(exce.getMessage());
                         }
                         catch (Exception exce)
                         {
@@ -768,6 +870,28 @@ public class DBSQL
         }
         
         this.keyReplace = i_KeyReplace;
+    }
+
+
+    
+    /**
+     * 获取：是否进行安全检查，防止SQL注入。默认为：true
+     */
+    public boolean isSafeCheck()
+    {
+        return safeCheck;
+    }
+
+
+    
+    /**
+     * 设置：是否进行安全检查，防止SQL注入。默认为：true
+     * 
+     * @param safeCheck 
+     */
+    public void setSafeCheck(boolean safeCheck)
+    {
+        this.safeCheck = safeCheck;
     }
 
 
