@@ -31,6 +31,7 @@
       <scope>test</scope>
     </dependency>
     
+    <!-- https://github.com/HY-ZhengWei/hy.common.base -->
 	<dependency>
 	    <groupId>org</groupId>
 	    <artifactId>hy.common.base</artifactId>
