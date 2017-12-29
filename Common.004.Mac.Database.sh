@@ -6,7 +6,7 @@ rm -R ./org/hy/common/configfile/junit
 rm -R ./org/hy/common/db/junit
 
 
-jar cvfm hy.common.db.jar MANIFEST.MF LICENSE org
+jar cvfm hy.common.db.jar MANIFEST.MF META-INF org
 
 cp hy.common.db.jar ..
 rm hy.common.db.jar
