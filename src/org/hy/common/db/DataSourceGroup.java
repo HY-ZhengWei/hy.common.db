@@ -472,7 +472,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
     {
         StringBuilder v_Buffer = new StringBuilder();
         
-        v_Buffer.append(this.isException ? "异常" : "正常").append("  ");
+        v_Buffer.append(this.isException ? "<font color='red'>异常</font>" : "正常").append("  ");
         
         if ( this.connLastTime == null )
         {
