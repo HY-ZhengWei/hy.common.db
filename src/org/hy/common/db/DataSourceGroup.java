@@ -483,8 +483,8 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
             v_Buffer.append(this.connLastTime.getFull());
         }
         
-        v_Buffer.append("  连接活动数量:").append(this.connActiveCount);
-        v_Buffer.append("  连接使用峰值:").append(this.connMaxUseCount);
+        v_Buffer.append("  连接活动数:").append(this.connActiveCount);
+        v_Buffer.append("  使用峰值:").append(this.connMaxUseCount);
         v_Buffer.append("  主备连接池数:").append(this.dataSources.size());
         
         return v_Buffer.toString();

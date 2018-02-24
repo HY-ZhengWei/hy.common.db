@@ -1,6 +1,7 @@
 package org.hy.common.db;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +83,19 @@ public class DBSQL
     public final static int   $DBSQL_TYPE_CALL      = 5;
     
     public final static int   $DBSQL_TYPE_DDL       = 6;
+    
+    
+    private final static Map<String ,String> $ReplaceKeys = new HashMap<String ,String>();
+    
+    
+    
+    static 
+    {
+        $ReplaceKeys.put("\t"  ," ");
+        $ReplaceKeys.put("\r"  ," ");
+        $ReplaceKeys.put("\n"  ," ");
+    }
+    
     
     
     /** 占位符SQL */
@@ -235,7 +249,7 @@ public class DBSQL
      */
     public synchronized void setSqlText(String i_SQLText) 
     {
-        this.sqlText = Help.NVL(i_SQLText).trim().replaceAll("\t" ," ").replaceAll("\r" ," ").replace("\n" ," ");
+        this.sqlText = StringHelp.replaceAll(Help.NVL(i_SQLText).trim() ,$ReplaceKeys);
         
         if ( this.segments == null )
         {
