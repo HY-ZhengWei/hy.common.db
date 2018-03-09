@@ -8,7 +8,9 @@ import javax.sql.DataSource;
 
 import org.hy.common.Date;
 import org.hy.common.Execute;
+import org.hy.common.Help;
 import org.hy.common.StringHelp;
+import org.hy.common.XJavaID;
 
 
 
@@ -26,10 +28,11 @@ import org.hy.common.StringHelp;
  *                                 这三类信息，只访问数据库一次，一但获取到，就一直保存在对象中。
  *              v4.0   2016-03-02  添加：主备数据库都出现异常时，暂停一小段时间(10秒)后，才允许尝试重新获取数据库连接
  *              v4.1   2016-12-22  修改：allowReconnection()改为public，否则无法在线程中调用成功，也就无法实现10秒后尝试重新获取数据库连接的功能。
- *              v5.0   2017-07-12  添加：isException() 异常状态标记，可通过 http://IP/WebName/analyses/analyseObject?xid=DSG* 页面全局查看所有的数据库连接池组信息。
+ *              v5.0   2017-07-12  添加：isException() 异常状态标记，可通过 http://IP:Port/WebName/analyses/analyseObject?DSG=Y 页面全局查看所有的数据库连接池组信息（支持集群）。
  *                                 添加：统一第三监控接口
+ *              v6.0   2018-03-09  添加：实现XJavaID接口，在数据库异常时，能更精确的报出异常的数据库是谁。
  */
-public final class DataSourceGroup implements Comparable<DataSourceGroup>
+public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJavaID
 {
     public static final String $DBType_Oracle     = "ORACLE";
     
@@ -56,6 +59,9 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 	
 	/** 唯一标示，主用于对比等操作 */
     private String             uuid;
+    
+    /** XJava池中对象的ID标识 */
+    private String             xjavaID;
     
     /** 数据库产品名称 */
     private String             dbProductName;
@@ -162,13 +168,13 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 			catch (Exception exce)
 			{
 			    this.isException = true;
-			    System.err.println("\n" + Date.getNowTime().getFull() + " 编号：" + this.validDSIndex + " 的数据库连接池失效。尝试获取下一个数据库连接池中的连接。");
+			    System.err.println("\n" + Date.getNowTime().getFull() + " 编号：" + this.validDSIndex + " 的数据库连接池" + Help.NVL(this.getXJavaID()) + "失效。尝试获取下一个数据库连接池中的连接。");
 			}
 		}
 		
 		if ( !this.isRunReConn )
 		{ 
-		    System.err.println("\n" + Date.getNowTime().getFull() + " 所有的数据库连接池失效，系统将等待 10秒后尝试重新连接。");
+		    System.err.println("\n" + Date.getNowTime().getFull() + " 所有的数据库连接池" + Help.NVL(this.getXJavaID()) + "失效，系统将等待 10秒后尝试重新连接。");
 		    
 		    this.isRunReConn  = true;  // 防止重复执行
 		    this.validDSIndex = Integer.MAX_VALUE;
@@ -192,7 +198,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 	 */
 	public synchronized void allowReconnection()
 	{
-	    System.out.println("\n" + Date.getNowTime().getFull() + " 数据库连接池组编号从0重新遍历，尝试重新连接。");
+	    System.out.println("\n" + Date.getNowTime().getFull() + " 数据库连接池组" + Help.NVL(this.getXJavaID()) + "编号从0重新遍历，尝试重新连接。");
 	    
 	    this.validDSIndex = 0;
 	    this.isRunReConn  = false;
@@ -215,9 +221,10 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
 	        return;
 	    }
 	    
-	    java.sql.Connection v_Conn = this.getConnection();
+	    java.sql.Connection v_Conn = null;
         try
         {
+            v_Conn = this.getConnection();
             DatabaseMetaData v_DBMetaData = v_Conn.getMetaData();
             
             this.dbProductName    = v_DBMetaData.getDatabaseProductName();  
@@ -405,6 +412,30 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup>
     public long getConnMaxUseCount()
     {
         return connMaxUseCount;
+    }
+    
+    
+    
+    /**
+     * 设置XJava池中对象的ID标识。此方法不用用户调用设置值，是自动的。
+     * 
+     * @param i_XJavaID
+     */
+    public void setXJavaID(String i_XJavaID)
+    {
+        this.xjavaID = i_XJavaID;
+    }
+    
+    
+    
+    /**
+     * 获取XJava池中对象的ID标识。
+     * 
+     * @return
+     */
+    public String getXJavaID()
+    {
+        return this.xjavaID;
     }
 
 
