@@ -67,6 +67,7 @@ import org.hy.common.MethodReflect;
  *                                   如果占位符对应的数值中也存在单引号，会造成生成的SQL语句无法正确执行。
  *                                   是否替换可通过 this.keyReplace 属性控制。
  *              v6.0  2017-08-01  1. 添加：安全检查防止SQL注入。
+ *              v6.1  2018-03-22  1. 优化：完善安全检查防止SQL注入，将'--形式的SQL放在整体SQL来判定。
  */
 public class DBSQL
 {
@@ -531,7 +532,16 @@ public class DBSQL
             }
         }
         
-        return v_SQL.toString();
+        // 2018-03-22  优化：完善安全检查防止SQL注入，将'--形式的SQL放在整体SQL来判定。
+        String v_SQLRet = v_SQL.toString();
+        if ( DBSQLSafe.isSafe_SQLComment(v_SQLRet) )
+        {
+            return v_SQLRet;
+        }
+        else
+        {
+            throw new RuntimeException(DBSQLSafe.sqlAttackLog(v_SQLRet));
+        }
     }
     
     
@@ -750,7 +760,16 @@ public class DBSQL
             }
         }
         
-        return v_SQL.toString();
+        // 2018-03-22  优化：完善安全检查防止SQL注入，将'--形式的SQL放在整体SQL来判定。
+        String v_SQLRet = v_SQL.toString();
+        if ( DBSQLSafe.isSafe_SQLComment(v_SQLRet) )
+        {
+            return v_SQLRet;
+        }
+        else
+        {
+            throw new RuntimeException(DBSQLSafe.sqlAttackLog(v_SQLRet));
+        }
     }
     
     

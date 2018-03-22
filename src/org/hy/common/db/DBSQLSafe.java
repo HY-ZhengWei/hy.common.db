@@ -25,6 +25,10 @@ import com.greenpineyu.fel.FelEngineImpl;
 public final class DBSQLSafe
 {
     
+    private static final String      $Comment      = "--";
+    
+    private static final String      $StringLimit  = "'";
+    
     private static final String []   $Relation     = {" AND " ," OR "};
     
     private static final String []   $Compares     = {"="  ,"<" ,"<=" ,">=" ,">"};
@@ -41,7 +45,7 @@ public final class DBSQLSafe
     
     private static final Pattern []  $Patterns     = new Pattern[$SQLKeys.length + 1];
     
-    private static final FelEngine   $Fel      = new FelEngineImpl();;
+    private static final FelEngine   $Fel          = new FelEngineImpl();
     
     
     
@@ -53,8 +57,6 @@ public final class DBSQLSafe
         {
             $Patterns[i] = Pattern.compile("(.+)\\s" + $SQLKeys[i][0].trim() + "\\s(.+)");
         }
-        
-        $Patterns[i] = Pattern.compile("=[^\n]*((')|(--)|(;))");  // 防止注释--、分号
     }
     
     
@@ -80,7 +82,7 @@ public final class DBSQLSafe
         {
             if ( !isSafe_Relations(v_Value ,v_Relation) )
             {
-                System.err.println(Date.getNowTime().getFull() + " SQL attack: " + i_Value);
+                System.err.println(sqlAttackLog(i_Value));
                 return false;
             }
         }
@@ -94,20 +96,9 @@ public final class DBSQLSafe
                 
                 if ( v_CheckRet )
                 {
-                    System.err.println(Date.getNowTime().getFull() + " SQL attack: " + i_Value);
+                    System.err.println(sqlAttackLog(i_Value));
                     return false;
                 }
-            }
-        }
-        
-        for (; v_Index<$Patterns.length; v_Index++)
-        {
-            v_CheckRet = $Patterns[v_Index].matcher(v_Value).find();
-            
-            if ( v_CheckRet )
-            {
-                System.err.println(Date.getNowTime().getFull() + " SQL attack: " + i_Value);
-                return false;
             }
         }
         
@@ -164,6 +155,54 @@ public final class DBSQLSafe
         }
         
         return true;
+    }
+    
+    
+    
+    /**
+     *判定SQL是否安全，只判定SQL注解符 --
+     * 
+     * 原先是通过正则表达式来判定。因为能耗而再次改良。
+     * 
+     * 注：入参为完整的SQL
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2018-03-22
+     * @version     v1.0
+     *
+     * @param i_Value
+     * @return
+     */
+    public final static boolean isSafe_SQLComment(String i_Value)
+    {
+        int v_IndexOf = i_Value.indexOf($Comment);
+        
+        while ( v_IndexOf >= 0 )
+        {
+            String v_SubValue = i_Value.substring(0 ,v_IndexOf).trim();
+            if ( v_SubValue.endsWith($StringLimit) )
+            {
+                int v_Count = StringHelp.getCount(v_SubValue ,(char)39);  // 单引号
+                if ( v_Count % 2 == 0 )
+                {
+                    return false;
+                }
+            }
+            
+            v_IndexOf = i_Value.indexOf($Comment ,v_IndexOf + 2);
+        }
+        
+        return true;
+    }
+    
+    
+    
+    /**
+     * 生成攻击日志
+     */
+    public final static String sqlAttackLog(String i_Value)
+    {
+        return "\n\n" + Date.getNowTime().getFull() + " SQL attack: " + i_Value + "\n\n";
     }
     
     
