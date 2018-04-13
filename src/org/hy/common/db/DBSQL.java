@@ -68,6 +68,7 @@ import org.hy.common.MethodReflect;
  *                                   是否替换可通过 this.keyReplace 属性控制。
  *              v6.0  2017-08-01  1. 添加：安全检查防止SQL注入。
  *              v6.1  2018-03-22  1. 优化：完善安全检查防止SQL注入，将'--形式的SQL放在整体SQL来判定。
+ *              v6.2  2018-04-13  1. 修复：将所有Java原生的replace字符串替换方法，全部的废弃不用，而是改用StringHelp类是替换方法。原因是$符等特殊字符会出错。
  */
 public class DBSQL
 {
@@ -176,8 +177,8 @@ public class DBSQL
             DBSQL_Split v_DBSQL_Segment = new DBSQL_Split(v_SplitSegment);
             
             String v_Info = v_DBSQL_Segment.getInfo();
-            v_Info = v_Info.replaceFirst("<\\[" ,"  ");
-            v_Info = v_Info.replaceFirst("\\]>" ,"  ");
+            v_Info = StringHelp.replaceFirst(v_Info ,"<\\[" ,"  ");
+            v_Info = StringHelp.replaceFirst(v_Info ,"\\]>" ,"  ");
             
             v_DBSQL_Segment.setInfo(v_Info);
             v_DBSQL_Segment.parsePlaceholders();
@@ -832,7 +833,7 @@ public class DBSQL
                     
                     while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
                     {
-                        v_Info = v_Info.replaceFirst(":" + v_PlaceHolder ,"?");
+                        v_Info = StringHelp.replaceFirst(v_Info ,":" + v_PlaceHolder ,"?");
                         v_Ret.getPlaceholders().add(v_PlaceHolder);
                     }
                 }
@@ -1062,7 +1063,7 @@ class DBSQLFillDefault implements DBSQLFill
      */
     public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value)
     {
-        return i_Info.replaceFirst(":" + i_PlaceHolder ,i_Value);
+        return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,i_Value);
     }
     
     
@@ -1081,7 +1082,7 @@ class DBSQLFillDefault implements DBSQLFill
      */
     public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value)
     {
-        return i_Info.replaceAll(":" + i_PlaceHolder ,i_Value);
+        return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,i_Value);
     }
     
     
@@ -1099,7 +1100,7 @@ class DBSQLFillDefault implements DBSQLFill
      */
     public String fillSpace(String i_Info ,String i_PlaceHolder)
     {
-        return i_Info.replaceAll(":" + i_PlaceHolder ,"");
+        return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,"");
     }
 }
 
@@ -1161,11 +1162,11 @@ class DBSQLFillKeyReplace implements DBSQLFill
     {
         try
         {
-            return i_Info.replaceFirst(":" + i_PlaceHolder ,i_Value.replaceAll($FillReplace ,$FillReplaceBy));
+            return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
         }
         catch (Exception exce)
         {
-            return i_Info.replaceFirst(":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value.replaceAll($FillReplace ,$FillReplaceBy)));
+            return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
         }
     }
     
@@ -1187,11 +1188,11 @@ class DBSQLFillKeyReplace implements DBSQLFill
     {
         try
         {
-            return i_Info.replaceAll(":" + i_PlaceHolder ,i_Value.replaceAll($FillReplace ,$FillReplaceBy));
+            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
         }
         catch (Exception exce)
         {
-            return i_Info.replaceAll(":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value.replaceAll($FillReplace ,$FillReplaceBy)));
+            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
         }
     }
     
@@ -1210,7 +1211,7 @@ class DBSQLFillKeyReplace implements DBSQLFill
      */
     public String fillSpace(String i_Info ,String i_PlaceHolder)
     {
-        return i_Info.replaceAll(":" + i_PlaceHolder ,"");
+        return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,"");
     }
     
 }
