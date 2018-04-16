@@ -177,8 +177,8 @@ public class DBSQL
             DBSQL_Split v_DBSQL_Segment = new DBSQL_Split(v_SplitSegment);
             
             String v_Info = v_DBSQL_Segment.getInfo();
-            v_Info = StringHelp.replaceFirst(v_Info ,"<\\[" ,"  ");
-            v_Info = StringHelp.replaceFirst(v_Info ,"\\]>" ,"  ");
+            v_Info = v_Info.replaceFirst("<\\[" ,"  ");
+            v_Info = v_Info.replaceFirst("\\]>" ,"  ");
             
             v_DBSQL_Segment.setInfo(v_Info);
             v_DBSQL_Segment.parsePlaceholders();
