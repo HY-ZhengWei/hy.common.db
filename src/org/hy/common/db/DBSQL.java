@@ -69,6 +69,7 @@ import org.hy.common.MethodReflect;
  *              v6.0  2017-08-01  1. 添加：安全检查防止SQL注入。
  *              v6.1  2018-03-22  1. 优化：完善安全检查防止SQL注入，将'--形式的SQL放在整体SQL来判定。
  *              v6.2  2018-04-13  1. 修复：将所有Java原生的replace字符串替换方法，全部的废弃不用，而是改用StringHelp类是替换方法。原因是$符等特殊字符会出错。
+ *                                        发现人：向以前。
  */
 public class DBSQL
 {
