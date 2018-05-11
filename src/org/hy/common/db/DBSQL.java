@@ -70,6 +70,7 @@ import org.hy.common.MethodReflect;
  *              v6.1  2018-03-22  1. 优化：完善安全检查防止SQL注入，将'--形式的SQL放在整体SQL来判定。
  *              v6.2  2018-04-13  1. 修复：将所有Java原生的replace字符串替换方法，全部的废弃不用，而是改用StringHelp类是替换方法。原因是$符等特殊字符会出错。
  *                                        发现人：向以前。
+ *              v6.3  2018-05-11  1. 修复：将INSERT ... SELECT语句也认定为查询语句，这样做是为了保证动态占位符功能
  */
 public class DBSQL
 {
@@ -208,6 +209,16 @@ public class DBSQL
         
         
         v_Pattern = Pattern.compile("^( )*[Ss][Ee][Ll][Ee][Cc][Tt][ ]+");
+        v_Matcher = v_Pattern.matcher(this.sqlText);
+        if ( v_Matcher.find() )
+        {
+            this.sqlType = $DBSQL_TYPE_SELECT;
+            return;
+        }
+        
+        
+        // 将INSERT ... SELECT语句也认定为查询语句，这样做是为了保证动态占位符功能  ZhengWei(HY) Add 2018-05-11
+        v_Pattern = Pattern.compile("^( )*[Ii][Nn][Ss][Ee][Rr][Tt][\\s\\S]+[Ss][Ee][Ll][Ee][Cc][Tt][ ]+");
         v_Matcher = v_Pattern.matcher(this.sqlText);
         if ( v_Matcher.find() )
         {
