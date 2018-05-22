@@ -28,6 +28,10 @@ import org.hy.common.StringHelp;
 public class DBSQL_Split extends SplitSegment
 {
     
+    private static final long serialVersionUID = -8451877528353835210L;
+
+    
+    
     /**
      * 占位符信息的集合
      * 
