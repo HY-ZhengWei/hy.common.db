@@ -70,7 +70,7 @@ import org.hy.common.MethodReflect;
  *              v6.1  2018-03-22  1. 优化：完善安全检查防止SQL注入，将'--形式的SQL放在整体SQL来判定。
  *              v6.2  2018-04-13  1. 修复：将所有Java原生的replace字符串替换方法，全部的废弃不用，而是改用StringHelp类是替换方法。原因是$符等特殊字符会出错。
  *                                        发现人：向以前。
- *              v6.3  2018-05-11  1. 修复：将INSERT ... SELECT语句也认定为查询语句，这样做是为了保证动态占位符功能
+ *              v6.3  2018-06-06  1. 修改：不再区分 $DBSQL_TYPE_INSERT 类型，使所有的SQL类型均采有相同的占位符填充逻辑
  */
 public class DBSQL
 {
@@ -216,8 +216,8 @@ public class DBSQL
             return;
         }
         
-        
         // 将INSERT ... SELECT语句也认定为查询语句，这样做是为了保证动态占位符功能  ZhengWei(HY) Add 2018-05-11
+        /*
         v_Pattern = Pattern.compile("^( )*[Ii][Nn][Ss][Ee][Rr][Tt][\\s\\S]+[Ss][Ee][Ll][Ee][Cc][Tt][ ]+");
         v_Matcher = v_Pattern.matcher(this.sqlText);
         if ( v_Matcher.find() )
@@ -225,7 +225,7 @@ public class DBSQL
             this.sqlType = $DBSQL_TYPE_SELECT;
             return;
         }
-        
+        */
         
         v_Pattern = Pattern.compile("^( )*[Ii][Nn][Ss][Ee][Rr][Tt][ ]+");
         v_Matcher = v_Pattern.matcher(this.sqlText);
@@ -335,201 +335,103 @@ public class DBSQL
                 String           v_Info             = v_DBSQL_Segment.getInfo();
                 int              v_ReplaceCount     = 0;
                 
-                if ( this.sqlType != $DBSQL_TYPE_INSERT )
+                // 不再区分 $DBSQL_TYPE_INSERT 类型，使所有的SQL类型均采有相同的占位符填充逻辑。ZhengWei(HY) Edit 2018-06-06
+                while ( v_IterPlaceholders.hasNext() )
                 {
-                    while ( v_IterPlaceholders.hasNext() )
+                    String        v_PlaceHolder   = v_IterPlaceholders.next();
+                    MethodReflect v_MethodReflect = null;
+                    /*
+                                            在实现全路径的解释功能之前的老方法  ZhengWei(HY) Del 2015-12-10
+                    Method        v_Method        = MethodReflect.getGetMethod(i_Obj.getClass() ,v_PlaceHolder ,true);
+                    */
+                    
+                    // 可实现xxx.yyy.www(或getXxx.getYyy.getWww)全路径的解释  ZhengWei(HY) Add 2015-12-10
+                    try
                     {
-                        String        v_PlaceHolder   = v_IterPlaceholders.next();
-                        MethodReflect v_MethodReflect = null;
-                        /*
-                                                在实现全路径的解释功能之前的老方法  ZhengWei(HY) Del 2015-12-10
-                        Method        v_Method        = MethodReflect.getGetMethod(i_Obj.getClass() ,v_PlaceHolder ,true);
-                        */
-                        
-                        // 可实现xxx.yyy.www(或getXxx.getYyy.getWww)全路径的解释  ZhengWei(HY) Add 2015-12-10
-                        try
-                        {
-                            v_MethodReflect = new MethodReflect(i_Obj ,v_PlaceHolder ,true ,MethodReflect.$NormType_Getter);
-                        }
-                        catch (Exception exce)
-                        {
-                            // 有些:xx占位符可能找到对应Java的Getter方法，所以忽略。 ZhengWei(HY) Add 2-16-09-29
-                            // Nothing.
-                        }
-                        
-                        if ( v_MethodReflect != null )
-                        {
-                            try
-                            {
-                                Object v_GetterValue = v_MethodReflect.invoke();
-                                
-                                // getter 方法有返回值时
-                                if ( v_GetterValue != null )
-                                {
-                                    if ( MethodReflect.class.equals(v_GetterValue.getClass()) )
-                                    {
-                                        boolean v_IsReplace = false;
-                                        
-                                        while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
-                                        {
-                                            // 可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。 ZhengWei(HY) Add 2016-03-18
-                                            Object v_MRValue = ((MethodReflect)v_GetterValue).invoke();
-                                            
-                                            if ( v_MRValue != null )
-                                            {
-                                                if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MRValue.toString()) )
-                                                {
-                                                    v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString());
-                                                    v_IsReplace = true;
-                                                }
-                                                else
-                                                {
-                                                    throw new DBSQLSafeException(this.getSqlText());
-                                                }
-                                            }
-                                            else
-                                            {
-                                                break;
-                                            }
-                                        }
-                                        
-                                        if ( v_IsReplace )
-                                        {
-                                            v_ReplaceCount++;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
-                                        {
-                                            v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
-                                            v_ReplaceCount++;
-                                        }
-                                        else
-                                        {
-                                            throw new DBSQLSafeException(this.getSqlText());
-                                        }
-                                    }
-                                }
-                            }
-                            catch (DBSQLSafeException exce)
-                            {
-                                throw new RuntimeException(exce.getMessage());
-                            }
-                            catch (Exception exce)
-                            {
-                                exce.printStackTrace();
-                            }
-                        }
+                        v_MethodReflect = new MethodReflect(i_Obj ,v_PlaceHolder ,true ,MethodReflect.$NormType_Getter);
                     }
-                }
-                else
-                {
-                    while ( v_IterPlaceholders.hasNext() )
+                    catch (Exception exce)
                     {
-                        String        v_PlaceHolder   = v_IterPlaceholders.next();
-                        MethodReflect v_MethodReflect = null;
-                        /*
-                                                在实现全路径的解释功能之前的老方法  ZhengWei(HY) Del 2015-12-10
-                        Method        v_Method        = MethodReflect.getGetMethod(i_Obj.getClass() ,v_PlaceHolder ,true);
-                        */
-                        
-                        // 可实现xxx.yyy.www(或getXxx.getYyy.getWww)全路径的解释  ZhengWei(HY) Add 2015-12-10
+                        // 有些:xx占位符可能找到对应Java的Getter方法，所以忽略。 ZhengWei(HY) Add 2-16-09-29
+                        // Nothing.
+                    }
+                    
+                    if ( v_MethodReflect != null )
+                    {
                         try
                         {
-                            v_MethodReflect = new MethodReflect(i_Obj ,v_PlaceHolder ,true ,MethodReflect.$NormType_Getter);
-                        }
-                        catch (Exception exce)
-                        {
-                            // 有些:xx占位符可能找到对应Java的Getter方法，所以忽略。 ZhengWei(HY) Add 2-16-09-29
-                            // Nothing.
-                        }
-                        
-                        if ( v_MethodReflect != null )
-                        {
-                            try
+                            Object v_GetterValue = v_MethodReflect.invoke();
+                            
+                            // getter 方法有返回值时
+                            if ( v_GetterValue != null )
                             {
-                                Object v_GetterValue = v_MethodReflect.invoke();
-                                
-                                // getter 方法有返回值时
-                                if ( v_GetterValue != null )
+                                if ( MethodReflect.class.equals(v_GetterValue.getClass()) )
                                 {
-                                    if ( MethodReflect.class.equals(v_GetterValue.getClass()) )
+                                    boolean v_IsReplace = false;
+                                    
+                                    // 这里循环的原因是：每次((MethodReflect)v_GetterValue).invoke()执行后的返回值v_MRValue都可能不一样。
+                                    while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
                                     {
-                                        boolean v_IsReplace = false;
+                                        // 可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。 ZhengWei(HY) Add 2016-03-18
+                                        Object v_MRValue = ((MethodReflect)v_GetterValue).invoke();
                                         
-                                        while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
+                                        if ( v_MRValue != null )
                                         {
-                                            // 可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。 ZhengWei(HY) Add 2016-03-18
-                                            Object v_MRValue = ((MethodReflect)v_GetterValue).invoke();
-                                            
-                                            if ( v_MRValue != null )
+                                            if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MRValue.toString()) )
                                             {
-                                                if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MRValue.toString()) )
-                                                {
-                                                    v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString());
-                                                    v_IsReplace = true;
-                                                }
-                                                else
-                                                {
-                                                    throw new DBSQLSafeException(this.getSqlText());
-                                                }
+                                                v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString());
+                                                v_IsReplace = true;
                                             }
                                             else
                                             {
-                                                String v_Value = Help.toObject(((MethodReflect)v_GetterValue).getReturnType()).toString();
-                                                if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_Value) )
-                                                {
-                                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
-                                                    v_IsReplace = true;
-                                                }
-                                                else
-                                                {
-                                                    throw new DBSQLSafeException(this.getSqlText());
-                                                }
+                                                throw new DBSQLSafeException(this.getSqlText());
                                             }
-                                        }
-                                        
-                                        if ( v_IsReplace )
-                                        {
-                                            v_ReplaceCount++;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
-                                        {
-                                            v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
-                                            v_ReplaceCount++;
                                         }
                                         else
                                         {
-                                            throw new DBSQLSafeException(this.getSqlText());
+                                            String v_Value = Help.toObject(((MethodReflect)v_GetterValue).getReturnType()).toString();
+                                            v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                            v_IsReplace = false;  // 为了支持动态占位符，这里设置为false
+                                            // 同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
+                                            
+                                            break;
                                         }
+                                    }
+                                    
+                                    if ( v_IsReplace )
+                                    {
+                                        v_ReplaceCount++;
                                     }
                                 }
                                 else
                                 {
-                                    String v_Value = Help.toObject(v_MethodReflect.getReturnType()).toString();
-                                    if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_Value) )
+                                    if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
                                     {
-                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
                                         v_ReplaceCount++;
                                     }
                                     else
                                     {
-                                        return "";
+                                        throw new DBSQLSafeException(this.getSqlText());
                                     }
                                 }
                             }
-                            catch (DBSQLSafeException exce)
+                            // 当占位符对应属性值为NULL时的处理
+                            else
                             {
-                                throw new RuntimeException(exce.getMessage());
+                                String v_Value = Help.toObject(v_MethodReflect.getReturnType()).toString();
+                                v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                // v_ReplaceCount++; 此处不要++，这样才能实现动态占位符的功能。
+                                // 上面的代码同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
                             }
-                            catch (Exception exce)
-                            {
-                                exce.printStackTrace();
-                            }
+                        }
+                        catch (DBSQLSafeException exce)
+                        {
+                            throw new RuntimeException(exce.getMessage());
+                        }
+                        catch (Exception exce)
+                        {
+                            exce.printStackTrace();
                         }
                     }
                 }
