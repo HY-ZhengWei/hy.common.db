@@ -71,6 +71,7 @@ import org.hy.common.MethodReflect;
  *              v6.2  2018-04-13  1. 修复：将所有Java原生的replace字符串替换方法，全部的废弃不用，而是改用StringHelp类是替换方法。原因是$符等特殊字符会出错。
  *                                        发现人：向以前。
  *              v6.3  2018-06-06  1. 修改：不再区分 $DBSQL_TYPE_INSERT 类型，使所有的SQL类型均采有相同的占位符填充逻辑
+ *              v7.0  2018-06-14  1. 添加：不是占位符的关键字的排除过滤
  */
 public class DBSQL
 {
@@ -122,6 +123,9 @@ public class DBSQL
     /** JDBC原生态的"预解释的SQL" */
     private DBPreparedSQL       preparedSQL;
     
+    /** 不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔 */
+    private Map<String ,String> notPlaceholders;
+    
     
     
     /**
@@ -134,6 +138,7 @@ public class DBSQL
         this.segments    = new ArrayList<DBSQL_Split>();
         this.preparedSQL = new DBPreparedSQL();
         this.safeCheck   = true;
+        this.setNotPlaceholders("MI,SS");
         this.setKeyReplace(false);
     }
     
@@ -340,6 +345,14 @@ public class DBSQL
                 {
                     String        v_PlaceHolder   = v_IterPlaceholders.next();
                     MethodReflect v_MethodReflect = null;
+                    
+                    // 排除不是占位符的变量，但它的形式可能是占位符的形式。ZhengWei(HY) Add 2018-06-14
+                    if ( this.notPlaceholders.containsKey(v_PlaceHolder) )
+                    {
+                        v_ReplaceCount++;
+                        continue;
+                    }
+                    
                     /*
                                             在实现全路径的解释功能之前的老方法  ZhengWei(HY) Del 2015-12-10
                     Method        v_Method        = MethodReflect.getGetMethod(i_Obj.getClass() ,v_PlaceHolder ,true);
@@ -470,6 +483,7 @@ public class DBSQL
      * @param i_Obj
      * @return
      */
+    @SuppressWarnings("null")
     public String getSQL(Map<String ,?> i_Values)
     {
         if ( Help.isNull(i_Values) )
@@ -485,8 +499,8 @@ public class DBSQL
         
         StringBuilder         v_SQL     = new StringBuilder();
         Iterator<DBSQL_Split> v_Ierator = this.segments.iterator();
-        
 
+        // 不再区分 $DBSQL_TYPE_INSERT 类型，使所有的SQL类型均采有相同的占位符填充逻辑。ZhengWei(HY) Edit 2018-06-06
         while ( v_Ierator.hasNext() )
         {
             DBSQL_Split         v_DBSQL_Segment = v_Ierator.next();
@@ -502,165 +516,91 @@ public class DBSQL
                 String           v_Info             = v_DBSQL_Segment.getInfo();
                 int              v_ReplaceCount     = 0;
                 
-                if ( this.sqlType != $DBSQL_TYPE_INSERT )
+                while ( v_IterPlaceholders.hasNext() )
                 {
-                    while ( v_IterPlaceholders.hasNext() )
+                    String v_PlaceHolder = v_IterPlaceholders.next();
+                    
+                    // 排除不是占位符的变量，但它的形式可能是占位符的形式。ZhengWei(HY) Add 2018-06-14
+                    if ( this.notPlaceholders.containsKey(v_PlaceHolder) )
                     {
-                        String v_PlaceHolder = v_IterPlaceholders.next();
+                        v_ReplaceCount++;
+                        continue;
+                    }
+                    
+                    try
+                    {
+                        Object v_MapValue = MethodReflect.getMapValue(i_Values ,v_PlaceHolder);
                         
-                        try
+                        if ( v_MapValue != null )
                         {
-                            Object v_MapValue = MethodReflect.getMapValue(i_Values ,v_PlaceHolder);
-                            
-                            if ( v_MapValue != null )
+                            if ( MethodReflect.class.equals(v_MapValue.getClass()) )
                             {
-                                if ( MethodReflect.class.equals(v_MapValue.getClass()) )
+                                boolean v_IsReplace = false;
+                                
+                                while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
                                 {
-                                    boolean v_IsReplace = false;
+                                    // 可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。 ZhengWei(HY) Add 2016-03-18
+                                    Object v_GetterValue = ((MethodReflect)v_MapValue).invoke();
                                     
-                                    while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
+                                    // getter 方法有返回值时
+                                    if ( v_GetterValue != null )
                                     {
-                                        // 可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。 ZhengWei(HY) Add 2016-03-18
-                                        Object v_GetterValue = ((MethodReflect)v_MapValue).invoke();
-                                        
-                                        // getter 方法有返回值时
-                                        if ( v_GetterValue != null )
+                                        if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
                                         {
-                                            if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
-                                            {
-                                                v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
-                                                v_IsReplace = true;
-                                            }
-                                            else
-                                            {
-                                                throw new DBSQLSafeException(this.getSqlText());
-                                            }
+                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
+                                            v_IsReplace = true;
                                         }
                                         else
                                         {
-                                            break;
+                                            throw new DBSQLSafeException(this.getSqlText());
                                         }
-                                    }
-                                    
-                                    if ( v_IsReplace )
-                                    {
-                                        v_ReplaceCount++;
-                                    }
-                                }
-                                else
-                                {
-                                    if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MapValue.toString()) )
-                                    {
-                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString());
-                                        v_ReplaceCount++;
                                     }
                                     else
                                     {
-                                        return "";
+                                        String v_Value = Help.toObject(((MethodReflect)v_GetterValue).getReturnType()).toString();
+                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                        v_IsReplace = false;  // 为了支持动态占位符，这里设置为false
+                                        // 同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
+                                        
+                                        break;
                                     }
                                 }
-                            }
-                            else
-                            {
-                                // 对于没有<[ ]>可选分段的SQL
-                                if ( 1 == this.segments.size() )
+                                
+                                if ( v_IsReplace )
                                 {
-                                    v_Info = this.dbSQLFill.fillSpace(v_Info ,v_PlaceHolder);
                                     v_ReplaceCount++;
                                 }
                             }
-                        }
-                        catch (DBSQLSafeException exce)
-                        {
-                            throw new RuntimeException(exce.getMessage());
-                        }
-                        catch (Exception exce)
-                        {
-                            exce.printStackTrace();
-                        }
-                    }
-                }
-                else
-                {
-                    while ( v_IterPlaceholders.hasNext() )
-                    {
-                        String v_PlaceHolder = v_IterPlaceholders.next();
-                        
-                        try
-                        {
-                            Object v_MapValue = MethodReflect.getMapValue(i_Values ,v_PlaceHolder);
-                            
-                            if ( v_MapValue != null )
+                            else
                             {
-                                if ( MethodReflect.class.equals(v_MapValue.getClass()) )
+                                if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MapValue.toString()) )
                                 {
-                                    boolean v_IsReplace = false;
-                                    
-                                    while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
-                                    {
-                                        // 可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。 ZhengWei(HY) Add 2016-03-18
-                                        Object v_GetterValue = ((MethodReflect)v_MapValue).invoke();
-                                        
-                                        // getter 方法有返回值时
-                                        if ( v_GetterValue != null )
-                                        {
-                                            if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
-                                            {
-                                                v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
-                                                v_IsReplace = true;
-                                            }
-                                            else
-                                            {
-                                                throw new DBSQLSafeException(this.getSqlText());
-                                            }
-                                        }
-                                        else
-                                        {
-                                            String v_Value = Help.toObject(((MethodReflect)v_MapValue).getReturnType()).toString();
-                                            if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_Value) )
-                                            {
-                                                v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_Value);
-                                                v_IsReplace = true;
-                                            }
-                                            else
-                                            {
-                                                throw new DBSQLSafeException(this.getSqlText());
-                                            }
-                                        }
-                                    }
-                                    
-                                    if ( v_IsReplace )
-                                    {
-                                        v_ReplaceCount++;
-                                    }
+                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString());
+                                    v_ReplaceCount++;
                                 }
                                 else
                                 {
-                                    if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MapValue.toString()) )
-                                    {
-                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString());
-                                        v_ReplaceCount++;
-                                    }
-                                    else
-                                    {
-                                        return "";
-                                    }
+                                    return "";
                                 }
                             }
-                            else
+                        }
+                        else
+                        {
+                            // 对于没有<[ ]>可选分段的SQL
+                            if ( 1 == this.segments.size() )
                             {
                                 v_Info = this.dbSQLFill.fillSpace(v_Info ,v_PlaceHolder);
                                 v_ReplaceCount++;
                             }
                         }
-                        catch (DBSQLSafeException exce)
-                        {
-                            throw new RuntimeException(exce.getMessage());
-                        }
-                        catch (Exception exce)
-                        {
-                            exce.printStackTrace();
-                        }
+                    }
+                    catch (DBSQLSafeException exce)
+                    {
+                        throw new RuntimeException(exce.getMessage());
+                    }
+                    catch (Exception exce)
+                    {
+                        exce.printStackTrace();
                     }
                 }
                 
@@ -842,6 +782,49 @@ public class DBSQL
         this.safeCheck = safeCheck;
     }
 
+
+    
+    /**
+     * 获取：不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔
+     */
+    public Map<String ,String> getNotPlaceholderMap()
+    {
+        return notPlaceholders;
+    }
+    
+    
+    
+    /**
+     * 获取：不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔
+     * 
+     * @param i_NotPlaceholders 
+     */
+    public void setNotPlaceholderMap(Map<String ,String> i_NotPlaceholders)
+    {
+        this.notPlaceholders = i_NotPlaceholders;
+    }
+    
+
+    
+    /**
+     * 设置：不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔
+     * 
+     * @param i_NotPlaceholders 
+     */
+    public void setNotPlaceholders(String i_NotPlaceholders)
+    {
+        this.notPlaceholders = new HashMap<String ,String>();
+        
+        String [] v_Arr = i_NotPlaceholders.split(",");
+        if ( !Help.isNull(v_Arr) )
+        {
+            for (String v_Placeholder : v_Arr)
+            {
+                this.notPlaceholders.put(v_Placeholder.trim() ,v_Placeholder);
+            }
+        }
+    }
+    
 
 
     public String toString()
