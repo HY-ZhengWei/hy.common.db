@@ -167,6 +167,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
 			}
 			catch (Exception exce)
 			{
+			    exce.printStackTrace();
 			    this.isException = true;
 			    System.err.println("\n" + Date.getNowTime().getFull() + " 编号：" + this.validDSIndex + " 的数据库连接池" + Help.NVL(this.getXJavaID()) + "失效。尝试获取下一个数据库连接池中的连接。");
 			}
