@@ -72,6 +72,7 @@ import org.hy.common.MethodReflect;
  *                                        发现人：向以前。
  *              v6.3  2018-06-06  1. 修改：不再区分 $DBSQL_TYPE_INSERT 类型，使所有的SQL类型均采有相同的占位符填充逻辑
  *              v7.0  2018-06-14  1. 添加：不是占位符的关键字的排除过滤
+ *              v8.0  2018-07-18  1. 添加：对Insert、Update语句解析出其表名称的功能。
  */
 public class DBSQL
 {
@@ -89,6 +90,17 @@ public class DBSQL
     
     public final static int   $DBSQL_TYPE_DDL       = 6;
     
+    
+    
+    private final static String              $Insert      = "INSERT";
+    
+    private final static String              $Into        = "INTO";
+    
+    private final static String              $Update      = "UPDATE";
+    
+    private final static String              $From        = "FROM";
+    
+    private final static String              $Where       = "WHERE";
     
     private final static Map<String ,String> $ReplaceKeys = new HashMap<String ,String>();
     
@@ -108,6 +120,9 @@ public class DBSQL
     
     /** SQL类型 */
     private int                 sqlType;
+    
+    /** SQL语句操作的表名称。用于Insert、Update语句 */
+    private String              sqlTableName;
     
     /** 替换数据库关键字。如，单引号替换成两个单引号。默认为：false，即不替换 */
     private boolean             keyReplace;
@@ -133,11 +148,12 @@ public class DBSQL
      */
     public DBSQL()
     {
-        this.sqlText     = "";
-        this.sqlType     = $DBSQL_TYPE_UNKNOWN;
-        this.segments    = new ArrayList<DBSQL_Split>();
-        this.preparedSQL = new DBPreparedSQL();
-        this.safeCheck   = true;
+        this.sqlText      = "";
+        this.sqlType      = $DBSQL_TYPE_UNKNOWN;
+        this.sqlTableName = null;
+        this.segments     = new ArrayList<DBSQL_Split>();
+        this.preparedSQL  = new DBPreparedSQL();
+        this.safeCheck    = true;
         this.setNotPlaceholders("MI,SS");
         this.setKeyReplace(false);
     }
@@ -236,7 +252,8 @@ public class DBSQL
         v_Matcher = v_Pattern.matcher(this.sqlText);
         if ( v_Matcher.find() )
         {
-            this.sqlType = $DBSQL_TYPE_INSERT;
+            this.sqlType      = $DBSQL_TYPE_INSERT;
+            this.sqlTableName = parserTableNameByInsert(this.sqlText);
             return;
         }
         
@@ -245,7 +262,8 @@ public class DBSQL
         v_Matcher = v_Pattern.matcher(this.sqlText);
         if ( v_Matcher.find() )
         {
-            this.sqlType = $DBSQL_TYPE_UPDATE;
+            this.sqlType      = $DBSQL_TYPE_UPDATE;
+            this.sqlTableName = parserTableNameByUpdate(this.sqlText);
             return;
         }
         
@@ -257,6 +275,108 @@ public class DBSQL
             this.sqlType = $DBSQL_TYPE_DELETE;
             return;
         }
+    }
+    
+    
+    
+    /**
+     * 解析Insert SQL语句的表名称
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2018-07-18
+     * @version     v1.0
+     *
+     * @param i_SQL
+     * @return
+     */
+    public static String parserTableNameByInsert(String i_SQL)
+    {
+        String    v_SQL    = StringHelp.replaceAll(Help.NVL(i_SQL).trim() ,$ReplaceKeys).toUpperCase();
+        String [] v_SQLArr = v_SQL.split(" ");
+        boolean   v_Insert = false;
+        boolean   v_Into   = false;
+        
+        for (String v_Item : v_SQLArr)
+        {
+            if ( Help.isNull(v_Item) )
+            {
+                continue;
+            }
+            else if ( v_Into )
+            {
+                return v_Item;
+            }
+            else if ( v_Insert )
+            {
+                if ( $Into.equals(v_Item) )
+                {
+                    v_Into = true;
+                }
+            }
+            else if ( $Insert.equals(v_Item) )
+            {
+                v_Insert = true;
+            }
+            else
+            {
+                v_Insert = false;
+            }
+        }
+        
+        return null;
+    }
+    
+    
+    
+    /**
+     * 解析Update SQL语句的表名称
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2018-07-18
+     * @version     v1.0
+     *
+     * @param i_SQL
+     * @return
+     */
+    public static String parserTableNameByUpdate(String i_SQL)
+    {
+        String    v_SQL        = StringHelp.replaceAll(Help.NVL(i_SQL).trim() ,$ReplaceKeys).toUpperCase();
+        String [] v_SQLArr     = v_SQL.split(" ");
+        int       v_FromIndex  = v_SQL.indexOf($From);
+        int       v_WhereIndex = v_SQL.indexOf($Where);
+        boolean   v_HaveFrom   = v_FromIndex > 0 && (v_FromIndex < v_WhereIndex || v_WhereIndex <= 0);
+        boolean   v_Update     = false;
+        boolean   v_From       = false;
+        String    v_TableName  = null;
+        
+        for (String v_Item : v_SQLArr)
+        {
+            if ( Help.isNull(v_Item) )
+            {
+                continue;
+            }
+            else if ( v_From )
+            {
+                return v_Item;
+            }
+            else if ( v_Update )
+            {
+                if ( $From.equals(v_Item) )
+                {
+                    v_From = true;
+                }
+                else if ( !v_HaveFrom )
+                {
+                   return v_Item; 
+                }
+            }
+            else if ( $Update.equals(v_Item) )
+            {
+                v_Update = true;
+            }
+        }
+        
+        return v_TableName;
     }
     
     
@@ -729,6 +849,28 @@ public class DBSQL
     
     
     
+    /**
+     * 获取：SQL语句操作的表名称。用于Insert、Update语句
+     */
+    public String getSqlTableName()
+    {
+        return sqlTableName;
+    }
+    
+
+    
+    /**
+     * 设置：SQL语句操作的表名称。用于Insert、Update语句
+     * 
+     * @param sqlTableName 
+     */
+    public void setSqlTableName(String sqlTableName)
+    {
+        this.sqlTableName = sqlTableName;
+    }
+    
+    
+
     /**
      * 获取：替换数据库关键字。如，单引号替换成两个单引号。默认为：false，即不替换
      */

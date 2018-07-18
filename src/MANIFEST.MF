@@ -1,5 +1,5 @@
-Manifest-Version: 2.3.15
+Manifest-Version: 2.3.16
 Created-By: HY.ZhengWei@qq.com  2009
-Specification-Version: 2.3.15  2018-06-24
+Specification-Version: 2.3.16  2018-07-18
 SourceCode: https://github.com/HY-ZhengWei/hy.common.db
 Build-JDK: 1.6
