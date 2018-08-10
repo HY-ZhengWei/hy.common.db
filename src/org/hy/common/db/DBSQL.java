@@ -1,5 +1,6 @@
 package org.hy.common.db;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -73,24 +74,35 @@ import org.hy.common.MethodReflect;
  *              v6.3  2018-06-06  1. 修改：不再区分 $DBSQL_TYPE_INSERT 类型，使所有的SQL类型均采有相同的占位符填充逻辑
  *              v7.0  2018-06-14  1. 添加：不是占位符的关键字的排除过滤
  *              v8.0  2018-07-18  1. 添加：对Insert、Update语句解析出其表名称的功能。
+ *              v9.0  2018-08-10  1. 添加：实现占位符X有条件的取值。占位符在满足条件时取值A，否则取值B。
+ *                                        取值A、B，可以是占位符X、NULL值，另一个占位符Y或常量字符。
+ *                                        类似于Mybatis IF条件功能。建议人：马龙
  */
-public class DBSQL
+public class DBSQL implements Serializable
 {
-    public final static int   $DBSQL_TYPE_UNKNOWN   = -1;
     
-    public final static int   $DBSQL_TYPE_SELECT    = 1;
-    
-    public final static int   $DBSQL_TYPE_INSERT    = 2;
-    
-    public final static int   $DBSQL_TYPE_UPDATE    = 3;
-    
-    public final static int   $DBSQL_TYPE_DELETE    = 4;
-    
-    public final static int   $DBSQL_TYPE_CALL      = 5;
-    
-    public final static int   $DBSQL_TYPE_DDL       = 6;
+    private static final long serialVersionUID = 6969242576876292691L;
     
     
+    
+    public final static int                  $DBSQL_TYPE_UNKNOWN = -1;
+    
+    public final static int                  $DBSQL_TYPE_SELECT  = 1;
+    
+    public final static int                  $DBSQL_TYPE_INSERT  = 2;
+    
+    public final static int                  $DBSQL_TYPE_UPDATE  = 3;
+    
+    public final static int                  $DBSQL_TYPE_DELETE  = 4;
+    
+    public final static int                  $DBSQL_TYPE_CALL    = 5;
+    
+    public final static int                  $DBSQL_TYPE_DDL     = 6;
+    
+    
+    
+    /** 数据库中的NULL关键字 */
+    private final static String              $NULL        = "NULL";
     
     private final static String              $Insert      = "INSERT";
     
@@ -116,30 +128,33 @@ public class DBSQL
     
     
     /** 占位符SQL */
-    private String              sqlText;
+    private String                   sqlText;
     
     /** SQL类型 */
-    private int                 sqlType;
+    private int                      sqlType;
     
     /** SQL语句操作的表名称。用于Insert、Update语句 */
-    private String              sqlTableName;
+    private String                   sqlTableName;
     
     /** 替换数据库关键字。如，单引号替换成两个单引号。默认为：false，即不替换 */
-    private boolean             keyReplace;
+    private boolean                  keyReplace;
     
     /** 是否进行安全检查，防止SQL注入。默认为：true */
-    private boolean             safeCheck;
+    private boolean                  safeCheck;
     
-    private DBSQLFill           dbSQLFill;
+    private DBSQLFill                dbSQLFill;
     
     /** 通过分析后的分段SQL信息 */
-    private List<DBSQL_Split>   segments;
+    private List<DBSQL_Split>        segments;
     
     /** JDBC原生态的"预解释的SQL" */
-    private DBPreparedSQL       preparedSQL;
+    private DBPreparedSQL            preparedSQL;
     
-    /** 不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔 */
-    private Map<String ,String> notPlaceholders;
+    /** 不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔。前缀无须冒号 */
+    private Map<String ,String>      notPlaceholders;
+    
+    /** 占位符取值条件 */
+    private Map<String ,DBCondition> conditions;
     
     
     
@@ -154,6 +169,7 @@ public class DBSQL
         this.segments     = new ArrayList<DBSQL_Split>();
         this.preparedSQL  = new DBPreparedSQL();
         this.safeCheck    = true;
+        this.conditions   = new HashMap<String ,DBCondition>();
         this.setNotPlaceholders("MI,SS");
         this.setKeyReplace(false);
     }
@@ -493,7 +509,18 @@ public class DBSQL
                     {
                         try
                         {
-                            Object v_GetterValue = v_MethodReflect.invoke();
+                            Object      v_GetterValue  = null;
+                            DBCondition v_Condition = Help.getValueIgnoreCase(this.conditions ,v_PlaceHolder);
+                            if ( v_Condition != null )
+                            {
+                                // 占位符取值条件  ZhengWei(HY) Add 2018-08-10
+                                boolean v_IsPass = v_Condition.isPass(i_Obj);
+                                v_GetterValue = v_Condition.getValue(i_Obj ,false ,v_IsPass);
+                            }
+                            else
+                            {
+                                v_GetterValue = v_MethodReflect.invoke();
+                            }
                             
                             // getter 方法有返回值时
                             if ( v_GetterValue != null )
@@ -552,7 +579,18 @@ public class DBSQL
                             // 当占位符对应属性值为NULL时的处理
                             else
                             {
-                                String v_Value = Help.toObject(v_MethodReflect.getReturnType()).toString();
+                                String v_Value = null;
+                                if ( v_Condition != null )
+                                {
+                                    // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
+                                    v_Value = $NULL;
+                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                }
+                                else
+                                {
+                                    v_Value = Help.toObject(v_MethodReflect.getReturnType()).toString();
+                                }
+                                
                                 v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
                                 // v_ReplaceCount++; 此处不要++，这样才能实现动态占位符的功能。
                                 // 上面的代码同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
@@ -603,7 +641,6 @@ public class DBSQL
      * @param i_Obj
      * @return
      */
-    @SuppressWarnings("null")
     public String getSQL(Map<String ,?> i_Values)
     {
         if ( Help.isNull(i_Values) )
@@ -649,7 +686,18 @@ public class DBSQL
                     
                     try
                     {
-                        Object v_MapValue = MethodReflect.getMapValue(i_Values ,v_PlaceHolder);
+                        Object      v_MapValue  = null;
+                        DBCondition v_Condition = Help.getValueIgnoreCase(this.conditions ,v_PlaceHolder);
+                        if ( v_Condition != null )
+                        {
+                            // 占位符取值条件  ZhengWei(HY) Add 2018-08-10
+                            boolean v_IsPass = v_Condition.isPass(i_Values);
+                            v_MapValue = v_Condition.getValue(i_Values ,false ,v_IsPass);
+                        }
+                        else
+                        {
+                            v_MapValue = MethodReflect.getMapValue(i_Values ,v_PlaceHolder);
+                        }
                         
                         if ( v_MapValue != null )
                         {
@@ -677,8 +725,21 @@ public class DBSQL
                                     }
                                     else
                                     {
-                                        String v_Value = Help.toObject(((MethodReflect)v_GetterValue).getReturnType()).toString();
+                                        String v_Value = null;
+                                        if ( v_Condition != null )
+                                        {
+                                            // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
+                                            v_Value = $NULL;
+                                            v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                        }
+                                        else
+                                        {
+                                            v_Value = Help.toObject(((MethodReflect)v_MapValue).getReturnType()).toString();
+                                        }
+                                        
                                         v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                        
+                                        
                                         v_IsReplace = false;  // 为了支持动态占位符，这里设置为false
                                         // 同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
                                         
@@ -709,7 +770,17 @@ public class DBSQL
                             // 对于没有<[ ]>可选分段的SQL
                             if ( 1 == this.segments.size() )
                             {
-                                v_Info = this.dbSQLFill.fillSpace(v_Info ,v_PlaceHolder);
+                                if ( v_Condition != null )
+                                {
+                                    // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
+                                    String v_Value = $NULL;
+                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                    v_Info = this.dbSQLFill.fillAll    (v_Info ,v_PlaceHolder ,v_Value);
+                                }
+                                else
+                                {
+                                    v_Info = this.dbSQLFill.fillSpace(v_Info ,v_PlaceHolder);
+                                }
                                 v_ReplaceCount++;
                             }
                         }
@@ -927,7 +998,7 @@ public class DBSQL
 
     
     /**
-     * 获取：不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔
+     * 获取：不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔。前缀无须冒号
      */
     public Map<String ,String> getNotPlaceholderMap()
     {
@@ -937,7 +1008,7 @@ public class DBSQL
     
     
     /**
-     * 获取：不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔
+     * 获取：不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔。前缀无须冒号
      * 
      * @param i_NotPlaceholders 
      */
@@ -949,7 +1020,7 @@ public class DBSQL
 
     
     /**
-     * 设置：不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔
+     * 设置：不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔。前缀无须冒号
      * 
      * @param i_NotPlaceholders 
      */
@@ -967,8 +1038,51 @@ public class DBSQL
         }
     }
     
-
-
+    
+    
+    /**
+     * 获取：占位符取值条件
+     */
+    public Map<String ,DBCondition> getConditions()
+    {
+        return conditions;
+    }
+    
+    
+    
+    /**
+     * 设置：占位符取值条件
+     * 
+     * @param conditions 
+     */
+    public void setConditions(Map<String ,DBCondition> conditions)
+    {
+        this.conditions = conditions;
+    }
+    
+    
+    
+    /**
+     * 添加占位符取值条件
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2018-08-10
+     * @version     v1.0
+     *
+     * @param i_DBCondition
+     */
+    public void addCondition(DBCondition i_DBCondition)
+    {
+        if ( i_DBCondition == null || Help.isNull(i_DBCondition.getName()) )
+        {
+            return;
+        }
+        
+        this.conditions.put(i_DBCondition.getName() ,i_DBCondition);
+    }
+    
+    
+    
     public String toString()
     {
         return this.sqlText;
@@ -1023,7 +1137,9 @@ interface DBSQLFill
     
     
     /**
-     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符。
+     * 
+     * 替换公式：i_Info.replaceAll(":" + i_PlaceHolder , i_Value.replaceAll("'" ,"''"));
      * 
      * @author      ZhengWei(HY)
      * @createDate  2016-08-09
@@ -1035,6 +1151,24 @@ interface DBSQLFill
      * @return
      */
     public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value);
+    
+    
+    
+    /**
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符（前后带单引号的替换）
+     * 
+     * 替换公式：i_Info.replaceAll("':" + i_PlaceHolder + "'", i_Value.replaceAll("'" ,"''"));
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2018-08-10
+     * @version     v1.0
+     *
+     * @param i_Info
+     * @param i_PlaceHolder
+     * @param i_Value
+     * @return
+     */
+    public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value);
     
     
     
@@ -1066,8 +1200,10 @@ interface DBSQLFill
  * @createDate  2016-08-09
  * @version     v1.0
  */
-class DBSQLFillDefault implements DBSQLFill
+class DBSQLFillDefault implements DBSQLFill ,Serializable
 {
+    private static final long serialVersionUID = -8568480897505758512L;
+    
     private static DBSQLFill $MySelf;
     
     
@@ -1110,6 +1246,8 @@ class DBSQLFillDefault implements DBSQLFill
     /**
      * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符
      * 
+     * 替换公式：i_Info.replaceAll(":" + i_PlaceHolder , i_Value.replaceAll("'" ,"''"));
+     * 
      * @author      ZhengWei(HY)
      * @createDate  2016-08-09
      * @version     v1.0
@@ -1122,6 +1260,27 @@ class DBSQLFillDefault implements DBSQLFill
     public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value)
     {
         return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,i_Value);
+    }
+    
+    
+    
+    /**
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符（前后带单引号的替换）
+     * 
+     * 替换公式：i_Info.replaceAll("':" + i_PlaceHolder + "'", i_Value.replaceAll("'" ,"''"));
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2018-08-10
+     * @version     v1.0
+     *
+     * @param i_Info
+     * @param i_PlaceHolder
+     * @param i_Value
+     * @return
+     */
+    public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value)
+    {
+        return StringHelp.replaceAll(i_Info ,"':" + i_PlaceHolder + "'" ,i_Value);
     }
     
     
@@ -1158,9 +1317,10 @@ class DBSQLFillDefault implements DBSQLFill
  * @createDate  2016-08-09
  * @version     v1.0
  */
-class DBSQLFillKeyReplace implements DBSQLFill
+class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
 {
-    
+    private static final long serialVersionUID = 3135504177775635847L;
+
     public  static final String    $FillReplace   = "'";
     
     public  static final String    $FillReplaceBy = "''";
@@ -1214,6 +1374,8 @@ class DBSQLFillKeyReplace implements DBSQLFill
     /**
      * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符
      * 
+     * 替换公式：i_Info.replaceAll(":" + i_PlaceHolder , i_Value.replaceAll("'" ,"''"));
+     * 
      * @author      ZhengWei(HY)
      * @createDate  2016-08-09
      * @version     v1.0
@@ -1232,6 +1394,34 @@ class DBSQLFillKeyReplace implements DBSQLFill
         catch (Exception exce)
         {
             return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+        }
+    }
+    
+    
+    
+    /**
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符（前后带单引号的替换）
+     * 
+     * 替换公式：i_Info.replaceAll("':" + i_PlaceHolder + "'", i_Value.replaceAll("'" ,"''"));
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2018-08-10
+     * @version     v1.0
+     *
+     * @param i_Info
+     * @param i_PlaceHolder
+     * @param i_Value
+     * @return
+     */
+    public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value)
+    {
+        try
+        {
+            return StringHelp.replaceAll(i_Info ,"':" + i_PlaceHolder + "'" ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+        }
+        catch (Exception exce)
+        {
+            return StringHelp.replaceAll(i_Info ,"':" + i_PlaceHolder + "'" ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
         }
     }
     

@@ -1,5 +1,6 @@
 package org.hy.common.db;
 
+import java.io.Serializable;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,8 +33,10 @@ import org.hy.common.XJavaID;
  *                                 添加：统一第三监控接口
  *              v6.0   2018-03-09  添加：实现XJavaID接口，在数据库异常时，能更精确的报出异常的数据库是谁。
  */
-public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJavaID
+public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJavaID ,Serializable
 {
+    private static final long serialVersionUID = -1707674417006083407L;
+
     public static final String $DBType_Oracle     = "ORACLE";
     
     public static final String $DBType_MySQL      = "MYSQL";

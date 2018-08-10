@@ -1,6 +1,7 @@
 package org.hy.common.db;
 
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -25,9 +26,10 @@ import javax.sql.DataSource;
  * @createDate  2016-03-02
  * @version     v1.0
  */
-public class DataSourceNoPool implements DataSource
+public class DataSourceNoPool implements DataSource ,Serializable
 {
-    
+    private static final long serialVersionUID = 3266676437574895788L;
+
     /** 是否加载过数据库连接驱动 */
     private boolean isLoadingDriver;
     

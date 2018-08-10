@@ -1,5 +1,6 @@
 package org.hy.common.db;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,8 +15,12 @@ import java.util.List;
  * @createDate  2016-08-03
  * @version     v1.0
  */
-public class DBPreparedSQL 
+public class DBPreparedSQL implements Serializable 
 {
+    private static final long serialVersionUID = 1823923050291047420L;
+    
+    
+
     /** 预解释SQL。如 Insert Into ... Values(? ,? ,?) */
     private String         sql;
     
