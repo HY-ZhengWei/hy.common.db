@@ -660,6 +660,28 @@ public class DBCondition implements Serializable
         this.name = Help.NVL(i_Name).trim();
     }
     
+    
+    
+    /**
+     * setCondition(...) 方法的别名
+     *
+     * @param i_Condition
+     */
+    public void setIf(String i_Condition)
+    {
+        this.setCondition(i_Condition);
+    }
+    
+    
+    
+    /**
+     * getCondition() 方法的别名
+     */
+    public String getIf()
+    {
+        return this.getCondition();
+    }
+    
 
     
     /**
@@ -688,6 +710,50 @@ public class DBCondition implements Serializable
             
             this.conditionFel = StringHelp.replaceAll(this.conditionFel ,$Fel_BlockingUp ,new String[]{""});
         }
+    }
+    
+    
+    
+    /**
+     * setTrueValue(...) 方法的别名
+     *
+     * @param i_TrueValue
+     */
+    public void setTrue(String i_TrueValue)
+    {
+        this.setTrueValue(i_TrueValue);
+    }
+    
+    
+    
+    /**
+     * getTrueValue() 方法的别名
+     */
+    public String getTrue()
+    {
+        return this.getTrueValue();
+    }
+    
+    
+    
+    /**
+     * setFalseValue(...) 方法的别名
+     *
+     * @param i_FalseValue
+     */
+    public void setFalse(String i_FalseValue)
+    {
+        this.setFalseValue(i_FalseValue);
+    }
+    
+    
+    
+    /**
+     * getFalseValue() 方法的别名
+     */
+    public String getFalse()
+    {
+        return this.getFalseValue();
     }
     
 
