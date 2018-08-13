@@ -541,7 +541,7 @@ public class DBCondition implements Serializable
     {
         Object v_Value = MethodReflect.getMapValue(i_ConditionValues ,i_Placeholder);
         
-        if ( i_IsPlaceholderFunction )
+        if ( i_IsPlaceholderFunction && v_Value != null )
         {
             if ( MethodReflect.class.equals(v_Value.getClass()) )
             {
@@ -592,7 +592,7 @@ public class DBCondition implements Serializable
         {
             v_Value = v_MethodReflect.invoke();
             
-            if ( i_IsPlaceholderFunction )
+            if ( i_IsPlaceholderFunction && v_Value != null )
             {
                 if ( MethodReflect.class.equals(v_Value.getClass()) )
                 {
