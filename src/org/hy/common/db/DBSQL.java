@@ -77,6 +77,10 @@ import org.hy.common.MethodReflect;
  *              v9.0  2018-08-10  1. 添加：实现占位符X有条件的取值。占位符在满足条件时取值A，否则取值B。
  *                                        取值A、B，可以是占位符X、NULL值，另一个占位符Y或常量字符。
  *                                        类似于Mybatis IF条件功能。建议人：马龙
+ *              v9.1  2018-11-02  1. 修复：入参类型是对象，并且对象的时间类型的属性为NULL时，自动按默认值（当前时间）填充SQL。发现人：邹德福
+ *                                        修改为如下规则：
+ *                                            1. 入参类型是Object时，占位符对应的值为NULL时，String类型按""空字符串填充，其它类型按"NULL"填充（可实现空指针写入数据库的功能）。
+ *                                            2. 入参类型是Map时   ，占位符对应的值为NULL时，String类型按""空字符串填充。
  */
 public class DBSQL implements Serializable
 {
@@ -435,6 +439,12 @@ public class DBSQL implements Serializable
     /**
      * 获取可执行的SQL语句，并按 i_Obj 填充有数值。
      * 
+     * 入参类型是Map时，在处理NULL与入参类型是Object，是不同的。
+     *   1. Map填充为""空的字符串。
+     *   2. Object填充为 "NULL" ，可以支持空值针的写入。
+     *   
+     *   但上方两种均可以通过配置<condition><name>占位符名称<name></condition>，向数据库写入空值针。
+     * 
      * @param i_Obj
      * @return
      */
@@ -588,10 +598,24 @@ public class DBSQL implements Serializable
                                 }
                                 else
                                 {
-                                    v_Value = Help.toObject(v_MethodReflect.getReturnType()).toString();
+                                    Class<?> v_ReturnType = v_MethodReflect.getReturnType();
+                                    if ( v_ReturnType == null ||  v_ReturnType == String.class )
+                                    {
+                                        v_Value = "";
+                                    }
+                                    else
+                                    {
+                                        v_Value = $NULL;
+                                        v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                    }
+                                    
+                                    // 2018-11-02 Del  废除默认值填充方式
+                                    // v_Value = Help.toObject(v_MethodReflect.getReturnType()).toString();
                                 }
                                 
+                                // 这里必须再执行一次填充
                                 v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                
                                 // v_ReplaceCount++; 此处不要++，这样才能实现动态占位符的功能。
                                 // 上面的代码同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
                             }
@@ -637,6 +661,12 @@ public class DBSQL implements Serializable
      * 
      * Map.key  即为占位符。
      *     2016-03-16 将不再区分大小写的模式配置参数。
+     *     
+     * 入参类型是Map时，在处理NULL与入参类型是Object，是不同的。
+     *   1. Map填充为""空的字符串。
+     *   2. Object填充为 "NULL" ，可以支持空值针的写入。
+     *   
+     *   但上方两种均可以通过配置<condition><name>占位符名称<name></condition>，向数据库写入空值针。
      * 
      * @param i_Obj
      * @return
@@ -734,11 +764,23 @@ public class DBSQL implements Serializable
                                         }
                                         else
                                         {
-                                            v_Value = Help.toObject(((MethodReflect)v_MapValue).getReturnType()).toString();
+                                            Class<?> v_ReturnType = ((MethodReflect)v_MapValue).getReturnType();
+                                            if ( v_ReturnType == null ||  v_ReturnType == String.class )
+                                            {
+                                                v_Value = "";
+                                            }
+                                            else
+                                            {
+                                                v_Value = $NULL;
+                                                v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                            }
+                                            
+                                            // 2018-11-02 Del  废除默认值填充方式
+                                            // v_Value = Help.toObject(((MethodReflect)v_MapValue).getReturnType()).toString();
                                         }
                                         
+                                        // 这里必须再执行一次填充
                                         v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
-                                        
                                         
                                         v_IsReplace = false;  // 为了支持动态占位符，这里设置为false
                                         // 同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
@@ -782,6 +824,23 @@ public class DBSQL implements Serializable
                                     v_Info = this.dbSQLFill.fillSpace(v_Info ,v_PlaceHolder);
                                 }
                                 v_ReplaceCount++;
+                            }
+                            else
+                            {
+                                String v_Value = null;
+                                if ( v_Condition != null )
+                                {
+                                    // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
+                                    v_Value = $NULL;
+                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                }
+                                else
+                                {
+                                    v_Value = "";
+                                }
+                                
+                                // 这里必须再执行一次填充
+                                v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
                             }
                         }
                     }
@@ -1415,13 +1474,15 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      */
     public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value)
     {
+        String v_PH = "':" + i_PlaceHolder + "'";
+        
         try
         {
-            return StringHelp.replaceAll(i_Info ,"':" + i_PlaceHolder + "'" ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+            return StringHelp.replaceAll(i_Info ,v_PH ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
         }
         catch (Exception exce)
         {
-            return StringHelp.replaceAll(i_Info ,"':" + i_PlaceHolder + "'" ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+            return StringHelp.replaceAll(i_Info ,v_PH ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
         }
     }
     
