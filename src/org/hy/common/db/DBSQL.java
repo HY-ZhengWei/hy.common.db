@@ -673,7 +673,7 @@ public class DBSQL implements Serializable
      */
     public String getSQL(Map<String ,?> i_Values)
     {
-        if ( Help.isNull(i_Values) )
+        if ( i_Values == null )
         {
             return null;
         }
