@@ -3,9 +3,11 @@ package org.hy.common.db;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -81,6 +83,7 @@ import org.hy.common.MethodReflect;
  *                                        修改为如下规则：
  *                                            1. 入参类型是Object时，占位符对应的值为NULL时，String类型按""空字符串填充，其它类型按"NULL"填充（可实现空指针写入数据库的功能）。
  *                                            2. 入参类型是Map时   ，占位符对应的值为NULL时，String类型按""空字符串填充。
+ *              V10.0 2019-01-10  1. 添加：允许个别占位符不去替换数据库关键字(如单引号')。
  */
 public class DBSQL implements Serializable
 {
@@ -143,6 +146,9 @@ public class DBSQL implements Serializable
     /** 替换数据库关键字。如，单引号替换成两个单引号。默认为：false，即不替换 */
     private boolean                  keyReplace;
     
+    /** 当this.keyReplace=true时有效。表示个别不替换数据库关键字的占位符。前缀无须冒号 */
+    private Set<String>              notKeyReplace;
+    
     /** 是否进行安全检查，防止SQL注入。默认为：true */
     private boolean                  safeCheck;
     
@@ -154,8 +160,8 @@ public class DBSQL implements Serializable
     /** JDBC原生态的"预解释的SQL" */
     private DBPreparedSQL            preparedSQL;
     
-    /** 不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔。前缀无须冒号 */
-    private Map<String ,String>      notPlaceholders;
+    /** 不是占位符的关键字的排除过滤。区分大小字。前缀无须冒号 */
+    private Set<String>              notPlaceholders;
     
     /** 占位符取值条件 */
     private Map<String ,DBCondition> conditions;
@@ -493,7 +499,7 @@ public class DBSQL implements Serializable
                     MethodReflect v_MethodReflect = null;
                     
                     // 排除不是占位符的变量，但它的形式可能是占位符的形式。ZhengWei(HY) Add 2018-06-14
-                    if ( this.notPlaceholders.containsKey(v_PlaceHolder) )
+                    if ( this.notPlaceholders.contains(v_PlaceHolder) )
                     {
                         v_ReplaceCount++;
                         continue;
@@ -708,7 +714,7 @@ public class DBSQL implements Serializable
                     String v_PlaceHolder = v_IterPlaceholders.next();
                     
                     // 排除不是占位符的变量，但它的形式可能是占位符的形式。ZhengWei(HY) Add 2018-06-14
-                    if ( this.notPlaceholders.containsKey(v_PlaceHolder) )
+                    if ( this.notPlaceholders.contains(v_PlaceHolder) )
                     {
                         v_ReplaceCount++;
                         continue;
@@ -1022,7 +1028,7 @@ public class DBSQL implements Serializable
     {
         if ( i_KeyReplace )
         {
-            this.dbSQLFill = DBSQLFillKeyReplace.getInstance();
+            this.dbSQLFill = DBSQLFillKeyReplace.getInstance(this.notKeyReplace);
         }
         else
         {
@@ -1057,9 +1063,9 @@ public class DBSQL implements Serializable
 
     
     /**
-     * 获取：不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔。前缀无须冒号
+     * 获取：不是占位符的关键字的排除过滤。区分大小字。前缀无须冒号
      */
-    public Map<String ,String> getNotPlaceholderMap()
+    public Set<String> getNotPlaceholderSet()
     {
         return notPlaceholders;
     }
@@ -1067,11 +1073,11 @@ public class DBSQL implements Serializable
     
     
     /**
-     * 获取：不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔。前缀无须冒号
+     * 获取：不是占位符的关键字的排除过滤。区分大小字。前缀无须冒号
      * 
      * @param i_NotPlaceholders 
      */
-    public void setNotPlaceholderMap(Map<String ,String> i_NotPlaceholders)
+    public void setNotPlaceholderSet(Set<String> i_NotPlaceholders)
     {
         this.notPlaceholders = i_NotPlaceholders;
     }
@@ -1079,26 +1085,71 @@ public class DBSQL implements Serializable
 
     
     /**
-     * 设置：不是占位符的关键字的排除过滤。区分大小字。多个间用,逗号分隔。前缀无须冒号
+     * 设置：不是占位符的关键字的排除过滤。区分大小字。前缀无须冒号。
      * 
-     * @param i_NotPlaceholders 
+     * @param i_NotPlaceholders  多个间用,逗号分隔
      */
     public void setNotPlaceholders(String i_NotPlaceholders)
     {
-        this.notPlaceholders = new HashMap<String ,String>();
+        this.notPlaceholders = new HashSet<String>();
         
         String [] v_Arr = i_NotPlaceholders.split(",");
         if ( !Help.isNull(v_Arr) )
         {
             for (String v_Placeholder : v_Arr)
             {
-                this.notPlaceholders.put(v_Placeholder.trim() ,v_Placeholder);
+                this.notPlaceholders.add(v_Placeholder.trim());
             }
         }
     }
     
     
     
+    /**
+     * 获取：当this.keyReplace=true时有效。表示个别不替换数据库关键字的占位符。前缀无须冒号
+     */
+    public Set<String> getNotKeyReplaceSet()
+    {
+        return notKeyReplace;
+    }
+    
+
+    
+    /**
+     * 设置：当this.keyReplace=true时有效。表示个别不替换数据库关键字的占位符。前缀无须冒号
+     * 
+     * @param notKeyReplace 
+     */
+    public void setNotKeyReplaceSet(Set<String> notKeyReplace)
+    {
+        this.notKeyReplace = notKeyReplace;
+    }
+    
+    
+    
+    /**
+     * 设置：当this.keyReplace=true时有效。表示个别不替换数据库关键字的占位符。前缀无须冒号。
+     * 
+     * @param notKeyReplaces  多个间用,逗号分隔
+     */
+    public void setNotKeyReplaces(String notKeyReplaces)
+    {
+        this.notKeyReplace = new HashSet<String>();
+        
+        String [] v_Arr = notKeyReplaces.split(",");
+        if ( !Help.isNull(v_Arr) )
+        {
+            for (String v_NotKeyReplace : v_Arr)
+            {
+                this.notKeyReplace.add(v_NotKeyReplace.trim());
+            }
+        }
+        
+        this.setKeyReplace(this.isKeyReplace());
+    }
+    
+
+
     /**
      * 获取：占位符取值条件
      */
@@ -1387,8 +1438,18 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
     private static       DBSQLFill $MySelf;
     
     
-    public synchronized static DBSQLFill getInstance()
+    /** 表示个别不替换数据库关键字的占位符。前缀无须冒号 */
+    private Set<String> notKeyReplace;
+    
+    
+    
+    public synchronized static DBSQLFill getInstance(Set<String> i_NotKeyReplace)
     {
+        if ( !Help.isNull(i_NotKeyReplace) )
+        {
+            return new DBSQLFillKeyReplace(i_NotKeyReplace);
+        }
+        
         if ( $MySelf == null )
         {
             $MySelf = new DBSQLFillKeyReplace();
@@ -1400,7 +1461,13 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
     
     private DBSQLFillKeyReplace()
     {
-        
+        this(null);
+    }
+    
+    
+    private DBSQLFillKeyReplace(Set<String> i_NotKeyReplace)
+    {
+        this.notKeyReplace = i_NotKeyReplace;
     }
     
     
@@ -1420,11 +1487,25 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
     {
         try
         {
-            return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+            if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
+            {
+                return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+            }
+            else
+            {
+                return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,i_Value);
+            }
         }
         catch (Exception exce)
         {
-            return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+            if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
+            {
+                return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+            }
+            else
+            {
+                return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+            }
         }
     }
     
@@ -1448,11 +1529,25 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
     {
         try
         {
-            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+            if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
+            {
+                return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+            }
+            else
+            {
+                return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,i_Value);
+            }
         }
         catch (Exception exce)
         {
-            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+            if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
+            {
+                return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+            }
+            else
+            {
+                return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+            }
         }
     }
     
@@ -1478,11 +1573,25 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         
         try
         {
-            return StringHelp.replaceAll(i_Info ,v_PH ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+            if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
+            {
+                return StringHelp.replaceAll(i_Info ,v_PH ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+            }
+            else
+            {
+                return StringHelp.replaceAll(i_Info ,v_PH ,i_Value);
+            }
         }
         catch (Exception exce)
         {
-            return StringHelp.replaceAll(i_Info ,v_PH ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+            if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
+            {
+                return StringHelp.replaceAll(i_Info ,v_PH ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+            }
+            else
+            {
+                return StringHelp.replaceAll(i_Info ,v_PH ,Matcher.quoteReplacement(i_Value));
+            }
         }
     }
     
