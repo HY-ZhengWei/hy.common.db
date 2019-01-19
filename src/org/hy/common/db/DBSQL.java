@@ -85,6 +85,8 @@ import org.hy.common.MethodReflect;
  *                                            2. 入参类型是Map时   ，占位符对应的值为NULL时，String类型按""空字符串填充。
  *              V10.0 2019-01-10  1. 添加：允许个别占位符不去替换数据库关键字(如单引号')。
  *              v11.0 2019-01-19  1. 添加：是否默认为NULL值写入到数据库。针对所有占位符做的统一设置。
+ *                                2. 添加：占位符条件组。用于实现Java编程语言中的 if .. else if ... else ... 的多条件复杂判定。
+ *                                        建议人：张宇
  */
 public class DBSQL implements Serializable
 {
@@ -136,36 +138,36 @@ public class DBSQL implements Serializable
     
     
     /** 占位符SQL */
-    private String                   sqlText;
+    private String                    sqlText;
     
     /** SQL类型 */
-    private int                      sqlType;
+    private int                       sqlType;
     
     /** SQL语句操作的表名称。用于Insert、Update语句 */
-    private String                   sqlTableName;
+    private String                    sqlTableName;
     
     /** 替换数据库关键字。如，单引号替换成两个单引号。默认为：false，即不替换 */
-    private boolean                  keyReplace;
+    private boolean                   keyReplace;
     
     /** 当this.keyReplace=true时有效。表示个别不替换数据库关键字的占位符。前缀无须冒号 */
-    private Set<String>              notKeyReplace;
+    private Set<String>               notKeyReplace;
     
     /** 是否进行安全检查，防止SQL注入。默认为：true */
-    private boolean                  safeCheck;
+    private boolean                   safeCheck;
     
-    private DBSQLFill                dbSQLFill;
+    private DBSQLFill                 dbSQLFill;
     
     /** 通过分析后的分段SQL信息 */
-    private List<DBSQL_Split>        segments;
+    private List<DBSQL_Split>         segments;
     
     /** JDBC原生态的"预解释的SQL" */
-    private DBPreparedSQL            preparedSQL;
+    private DBPreparedSQL             preparedSQL;
     
     /** 不是占位符的关键字的排除过滤。区分大小字。前缀无须冒号 */
-    private Set<String>              notPlaceholders;
+    private Set<String>               notPlaceholders;
     
     /** 占位符取值条件 */
-    private Map<String ,DBCondition> conditions;
+    private Map<String ,DBConditions> conditions;
     
     /** 
      * 是否默认为NULL值写入到数据库。针对所有占位符做的统一设置。
@@ -177,7 +179,7 @@ public class DBSQL implements Serializable
      * 
      * 默认为：false。 
      */
-    private boolean                  defaultNull;
+    private boolean                   defaultNull;
     
     
     
@@ -192,7 +194,7 @@ public class DBSQL implements Serializable
         this.segments     = new ArrayList<DBSQL_Split>();
         this.preparedSQL  = new DBPreparedSQL();
         this.safeCheck    = true;
-        this.conditions   = new HashMap<String ,DBCondition>();
+        this.conditions   = new HashMap<String ,DBConditions>();
         this.defaultNull  = false;
         this.setNotPlaceholders("MI,SS");
         this.setKeyReplace(false);
@@ -537,13 +539,12 @@ public class DBSQL implements Serializable
                     {
                         try
                         {
-                            Object      v_GetterValue  = null;
-                            DBCondition v_Condition = Help.getValueIgnoreCase(this.conditions ,v_PlaceHolder);
-                            if ( v_Condition != null )
+                            Object       v_GetterValue    = null;
+                            DBConditions v_ConditionGroup = Help.getValueIgnoreCase(this.conditions ,v_PlaceHolder);
+                            if ( v_ConditionGroup != null )
                             {
                                 // 占位符取值条件  ZhengWei(HY) Add 2018-08-10
-                                boolean v_IsPass = v_Condition.isPass(i_Obj);
-                                v_GetterValue = v_Condition.getValue(i_Obj ,false ,v_IsPass);
+                                v_GetterValue = v_ConditionGroup.getValue(i_Obj ,false);
                             }
                             else
                             {
@@ -608,7 +609,7 @@ public class DBSQL implements Serializable
                             else
                             {
                                 String v_Value = null;
-                                if ( v_Condition != null || this.defaultNull )
+                                if ( v_ConditionGroup != null || this.defaultNull )
                                 {
                                     // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                     v_Value = $NULL;
@@ -734,13 +735,12 @@ public class DBSQL implements Serializable
                     
                     try
                     {
-                        Object      v_MapValue  = null;
-                        DBCondition v_Condition = Help.getValueIgnoreCase(this.conditions ,v_PlaceHolder);
-                        if ( v_Condition != null )
+                        Object       v_MapValue       = null;
+                        DBConditions v_ConditionGroup = Help.getValueIgnoreCase(this.conditions ,v_PlaceHolder);
+                        if ( v_ConditionGroup != null )
                         {
                             // 占位符取值条件  ZhengWei(HY) Add 2018-08-10
-                            boolean v_IsPass = v_Condition.isPass(i_Values);
-                            v_MapValue = v_Condition.getValue(i_Values ,false ,v_IsPass);
+                            v_MapValue = v_ConditionGroup.getValue(i_Values ,false);
                         }
                         else
                         {
@@ -774,7 +774,7 @@ public class DBSQL implements Serializable
                                     else
                                     {
                                         String v_Value = null;
-                                        if ( v_Condition != null || this.defaultNull )
+                                        if ( v_ConditionGroup != null || this.defaultNull )
                                         {
                                             // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                             v_Value = $NULL;
@@ -830,7 +830,7 @@ public class DBSQL implements Serializable
                             // 对于没有<[ ]>可选分段的SQL
                             if ( 1 == this.segments.size() )
                             {
-                                if ( v_Condition != null || this.defaultNull )
+                                if ( v_ConditionGroup != null || this.defaultNull )
                                 {
                                     // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                     String v_Value = $NULL;
@@ -846,7 +846,7 @@ public class DBSQL implements Serializable
                             else
                             {
                                 String v_Value = null;
-                                if ( v_Condition != null || this.defaultNull )
+                                if ( v_ConditionGroup != null || this.defaultNull )
                                 {
                                     // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                     v_Value = $NULL;
@@ -1165,7 +1165,7 @@ public class DBSQL implements Serializable
     /**
      * 获取：占位符取值条件
      */
-    public Map<String ,DBCondition> getConditions()
+    public Map<String ,DBConditions> getConditions()
     {
         return conditions;
     }
@@ -1177,7 +1177,7 @@ public class DBSQL implements Serializable
      * 
      * @param conditions 
      */
-    public void setConditions(Map<String ,DBCondition> conditions)
+    public void setConditions(Map<String ,DBConditions> conditions)
     {
         this.conditions = conditions;
     }
@@ -1191,16 +1191,48 @@ public class DBSQL implements Serializable
      * @createDate  2018-08-10
      * @version     v1.0
      *
-     * @param i_DBCondition
+     * @param i_Condition   条件
      */
-    public void addCondition(DBCondition i_DBCondition)
+    public void addCondition(DBCondition i_Condition)
     {
-        if ( i_DBCondition == null || Help.isNull(i_DBCondition.getName()) )
+        if ( i_Condition == null || Help.isNull(i_Condition.getName()) )
         {
             return;
         }
         
-        this.conditions.put(i_DBCondition.getName() ,i_DBCondition);
+        DBConditions v_ConditionGroup = new DBConditions();
+        v_ConditionGroup.addCondition(i_Condition);
+        
+        this.addCondition(i_Condition.getName() ,v_ConditionGroup);
+    }
+    
+    
+    
+    /**
+     * 添加占位符取值的条件组
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2019-01-19
+     * @version     v1.0
+     *
+     * @param i_PlaceholderName  占位符名称（不含前缀的冒号:）
+     * @param i_ConditionGroup   条件组
+     */
+    public void addCondition(String i_PlaceholderName ,DBConditions i_ConditionGroup)
+    {
+        if ( Help.isNull(i_PlaceholderName)
+          || i_ConditionGroup == null
+          || i_ConditionGroup.size() < 0 )
+        {
+            return;
+        }
+        
+        for (int i=i_ConditionGroup.size()-1; i>=0; i--)
+        {
+            i_ConditionGroup.get(i).setName(i_PlaceholderName);
+        }
+        
+        this.conditions.put(i_PlaceholderName ,i_ConditionGroup);
     }
     
 

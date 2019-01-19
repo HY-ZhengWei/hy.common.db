@@ -134,7 +134,7 @@ public class DBCondition implements Serializable
     
     
     /**
-     * 通过条件判定后，获取最终的数值。条件满足时返回真值；条件不满足时返回假值。
+     * 通过条件判定后（条件在此方法内部做判定），获取最终的数值。条件满足时返回真值；条件不满足时返回假值。
      * 
      * @author      ZhengWei(HY)
      * @createDate  2018-08-08
@@ -151,7 +151,7 @@ public class DBCondition implements Serializable
     
     
     /**
-     * 通过条件判定后，获取最终的数值。条件满足时返回真值；条件不满足时返回假值。
+     * 通过条件判定后（条件在此方法内部做判定），获取最终的数值。条件满足时返回真值；条件不满足时返回假值。
      * 
      * @author      ZhengWei(HY)
      * @createDate  2018-08-10
@@ -163,11 +163,6 @@ public class DBCondition implements Serializable
      */
     public Object getValue(Map<String ,?> i_ConditionValues ,boolean i_IsPlaceholderFunction)
     {
-        if ( Help.isNull(this.name) )
-        {
-            return null;
-        }
-        
         try
         {
             if ( this.isPass(i_ConditionValues) )
@@ -203,11 +198,6 @@ public class DBCondition implements Serializable
      */
     public Object getValue(Map<String ,?> i_ConditionValues ,boolean i_IsPlaceholderFunction ,boolean i_IsPass)
     {
-        if ( Help.isNull(this.name) )
-        {
-            return null;
-        }
-        
         try
         {
             if ( i_IsPass )
@@ -230,7 +220,7 @@ public class DBCondition implements Serializable
     
     
     /**
-     * 通过条件判定后，获取最终的数值。条件满足时返回真值；条件不满足时返回假值。
+     * 通过条件判定后（条件在此方法内部做判定），获取最终的数值。条件满足时返回真值；条件不满足时返回假值。
      * 
      * @author      ZhengWei(HY)
      * @createDate  2018-08-08
@@ -247,7 +237,7 @@ public class DBCondition implements Serializable
     
     
     /**
-     * 通过条件判定后，获取最终的数值。条件满足时返回真值；条件不满足时返回假值。
+     * 通过条件判定后（条件在此方法内部做判定），获取最终的数值。条件满足时返回真值；条件不满足时返回假值。
      * 
      * @author      ZhengWei(HY)
      * @createDate  2018-08-10
@@ -260,11 +250,6 @@ public class DBCondition implements Serializable
     @SuppressWarnings("unchecked")
     public Object getValue(Object i_ConditionValues ,boolean i_IsPlaceholderFunction)
     {
-        if ( Help.isNull(this.name) )
-        {
-            return null;
-        }
-        
         if ( MethodReflect.isExtendImplement(i_ConditionValues ,Map.class) )
         {
             return this.getValue((Map<String ,?>)i_ConditionValues);
@@ -306,11 +291,6 @@ public class DBCondition implements Serializable
     @SuppressWarnings("unchecked")
     public Object getValue(Object i_ConditionValues ,boolean i_IsPlaceholderFunction ,boolean i_IsPass)
     {
-        if ( Help.isNull(this.name) )
-        {
-            return null;
-        }
-        
         if ( MethodReflect.isExtendImplement(i_ConditionValues ,Map.class) )
         {
             return this.getValue((Map<String ,?>)i_ConditionValues ,i_IsPlaceholderFunction ,i_IsPass);
