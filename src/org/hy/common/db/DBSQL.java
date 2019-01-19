@@ -84,6 +84,7 @@ import org.hy.common.MethodReflect;
  *                                            1. 入参类型是Object时，占位符对应的值为NULL时，String类型按""空字符串填充，其它类型按"NULL"填充（可实现空指针写入数据库的功能）。
  *                                            2. 入参类型是Map时   ，占位符对应的值为NULL时，String类型按""空字符串填充。
  *              V10.0 2019-01-10  1. 添加：允许个别占位符不去替换数据库关键字(如单引号')。
+ *              v11.0 2019-01-19  1. 添加：是否默认为NULL值写入到数据库。针对所有占位符做的统一设置。
  */
 public class DBSQL implements Serializable
 {
@@ -166,6 +167,18 @@ public class DBSQL implements Serializable
     /** 占位符取值条件 */
     private Map<String ,DBCondition> conditions;
     
+    /** 
+     * 是否默认为NULL值写入到数据库。针对所有占位符做的统一设置。
+     * 
+     * 当 this.defaultNull = true 时，任何类型的值为null对象时，均向以NULL值写入到数据库。
+     * 当 this.defaultNull = false 时，
+     *      1. String 类型的值，按 "" 空字符串写入到数据库 或 拼接成SQL语句
+     *      2. 其它类型的值，以NULL值写入到数据库。
+     * 
+     * 默认为：false。 
+     */
+    private boolean                  defaultNull;
+    
     
     
     /**
@@ -180,6 +193,7 @@ public class DBSQL implements Serializable
         this.preparedSQL  = new DBPreparedSQL();
         this.safeCheck    = true;
         this.conditions   = new HashMap<String ,DBCondition>();
+        this.defaultNull  = false;
         this.setNotPlaceholders("MI,SS");
         this.setKeyReplace(false);
     }
@@ -193,10 +207,8 @@ public class DBSQL implements Serializable
      */
     public DBSQL(String i_SQLText)
     {
-        this.sqlType   = $DBSQL_TYPE_UNKNOWN;
-        this.safeCheck = true;
+        this();
         this.setSqlText(i_SQLText);
-        this.setKeyReplace(false);
     }
     
     
@@ -596,7 +608,7 @@ public class DBSQL implements Serializable
                             else
                             {
                                 String v_Value = null;
-                                if ( v_Condition != null )
+                                if ( v_Condition != null || this.defaultNull )
                                 {
                                     // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                     v_Value = $NULL;
@@ -619,7 +631,7 @@ public class DBSQL implements Serializable
                                     // v_Value = Help.toObject(v_MethodReflect.getReturnType()).toString();
                                 }
                                 
-                                // 这里必须再执行一次填充
+                                // 这里必须再执行一次填充。因为第一次为 fillMark()，本次为 fillAll() 方法
                                 v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
                                 
                                 // v_ReplaceCount++; 此处不要++，这样才能实现动态占位符的功能。
@@ -762,7 +774,7 @@ public class DBSQL implements Serializable
                                     else
                                     {
                                         String v_Value = null;
-                                        if ( v_Condition != null )
+                                        if ( v_Condition != null || this.defaultNull )
                                         {
                                             // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                             v_Value = $NULL;
@@ -785,7 +797,7 @@ public class DBSQL implements Serializable
                                             // v_Value = Help.toObject(((MethodReflect)v_MapValue).getReturnType()).toString();
                                         }
                                         
-                                        // 这里必须再执行一次填充
+                                        // 这里必须再执行一次填充。因为第一次为 fillMark()，本次为 fillAll() 方法
                                         v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
                                         
                                         v_IsReplace = false;  // 为了支持动态占位符，这里设置为false
@@ -818,7 +830,7 @@ public class DBSQL implements Serializable
                             // 对于没有<[ ]>可选分段的SQL
                             if ( 1 == this.segments.size() )
                             {
-                                if ( v_Condition != null )
+                                if ( v_Condition != null || this.defaultNull )
                                 {
                                     // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                     String v_Value = $NULL;
@@ -834,7 +846,7 @@ public class DBSQL implements Serializable
                             else
                             {
                                 String v_Value = null;
-                                if ( v_Condition != null )
+                                if ( v_Condition != null || this.defaultNull )
                                 {
                                     // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                     v_Value = $NULL;
@@ -845,7 +857,7 @@ public class DBSQL implements Serializable
                                     v_Value = "";
                                 }
                                 
-                                // 这里必须再执行一次填充
+                                // 这里必须再执行一次填充。因为第一次为 fillMark()，本次为 fillAll() 方法
                                 v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
                             }
                         }
@@ -1191,8 +1203,44 @@ public class DBSQL implements Serializable
         this.conditions.put(i_DBCondition.getName() ,i_DBCondition);
     }
     
+
+    
+    /**
+     * 获取：是否默认为NULL值写入到数据库。针对所有占位符做的统一设置。
+     * 
+     * 当 this.defaultNull = true 时，任何类型的值为null对象时，均向以NULL值写入到数据库。
+     * 当 this.defaultNull = false 时，
+     *      1. String 类型的值，按 "" 空字符串写入到数据库 或 拼接成SQL语句
+     *      2. 其它类型的值，以NULL值写入到数据库。
+     * 
+     * 默认为：false。
+     */
+    public boolean isDefaultNull()
+    {
+        return defaultNull;
+    }
+
     
     
+    /**
+     * 设置：是否默认为NULL值写入到数据库。针对所有占位符做的统一设置。
+     * 
+     * 当 this.defaultNull = true 时，任何类型的值为null对象时，均向以NULL值写入到数据库。
+     * 当 this.defaultNull = false 时，
+     *      1. String 类型的值，按 "" 空字符串写入到数据库 或 拼接成SQL语句
+     *      2. 其它类型的值，以NULL值写入到数据库。
+     * 
+     * 默认为：false。
+     * 
+     * @param defaultNull 
+     */
+    public void setDefaultNull(boolean defaultNull)
+    {
+        this.defaultNull = defaultNull;
+    }
+
+
+
     public String toString()
     {
         return this.sqlText;
