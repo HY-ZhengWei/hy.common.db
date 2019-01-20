@@ -1212,6 +1212,31 @@ public class DBSQL implements Serializable
      * 添加占位符取值的条件组
      * 
      * @author      ZhengWei(HY)
+     * @createDate  2019-01-20
+     * @version     v1.0
+     *
+     * @param i_ConditionGroup   条件组
+     */
+    public void addCondition(DBConditions i_ConditionGroup)
+    {
+        if ( i_ConditionGroup == null
+          || i_ConditionGroup.size() < 0
+          || Help.isNull(i_ConditionGroup.getName()) )
+        {
+            return;
+        }
+        
+        i_ConditionGroup.setName(i_ConditionGroup.getName());
+        
+        this.conditions.put(i_ConditionGroup.getName() ,i_ConditionGroup);
+    }
+    
+    
+    
+    /**
+     * 添加占位符取值的条件组
+     * 
+     * @author      ZhengWei(HY)
      * @createDate  2019-01-19
      * @version     v1.0
      *
@@ -1227,10 +1252,7 @@ public class DBSQL implements Serializable
             return;
         }
         
-        for (int i=i_ConditionGroup.size()-1; i>=0; i--)
-        {
-            i_ConditionGroup.get(i).setName(i_PlaceholderName);
-        }
+        i_ConditionGroup.setName(i_PlaceholderName);
         
         this.conditions.put(i_PlaceholderName ,i_ConditionGroup);
     }

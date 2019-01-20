@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.hy.common.Help;
 import org.hy.common.Return;
+import org.hy.common.StringHelp;
 
 
 
@@ -21,6 +22,34 @@ import org.hy.common.Return;
  * 本类主要用于实现Java编程语言中的 if .. else if ... else ... 的多条件复杂判定。
  * DBCondition只能实现Java编程语言中的 if ... else ... 的条件判定。
  * 
+ * XML配置举例：
+ * <ConditionGroup>
+ *     <name>占位符名称。不含前缀的冒号</name>
+ *     <if>条件1</if>
+ *     <true>条件1满足时执行的真值</true>
+ *     <if>条件2</if>
+ *     <true>条件2满足时执行的真值</true>
+ *     ... ...
+ *     <false>所有条件均不满足时的假值</false>
+ * </ConditionGroup>
+ * 
+ * <if></if><true></true> 可以有无数个，即不限制出现的个数。
+ * <false></false>        相当于Java语言中的 else 语法，所以只在最后出现一次即可。
+ * 
+ * 上面XML配置翻译成Java语言为：
+ *     if ( 条件1 )
+ *     {
+ *         条件1满足时执行的真值
+ *     }
+ *     else if ( 条件2 )
+ *     {
+ *         条件2满足时执行的真值
+ *     }
+ *     else
+ *     {
+ *         所有条件均不满足时的假值
+ *     }
+ * 
  * @author      ZhengWei(HY)
  * @createDate  2019-01-19
  * @version     v1.0
@@ -29,6 +58,9 @@ public class DBConditions implements Serializable
 {
 
     private static final long serialVersionUID = -5278851854622482181L;
+    
+    /** 占位符的名称。不包括：冒号。不区分大小写 */
+    private String            name;
     
     /** 顺次判定的条件集合 */
     private List<DBCondition> conditions;
@@ -313,6 +345,94 @@ public class DBConditions implements Serializable
     public void clear()
     {
         this.conditions.clear();
+    }
+    
+    
+    
+    /**
+     * 获取：占位符的名称。不包括：冒号。不区分大小写
+     */
+    public String getName()
+    {
+        return name;
+    }
+
+
+    
+    /**
+     * 设置：占位符的名称。不包括：冒号。不区分大小写
+     * 
+     * @param i_Name 
+     */
+    public void setName(String i_Name)
+    {
+        this.name = StringHelp.replaceAll(i_Name ,":" ,"");
+        
+        if ( Help.isNull(this.conditions) )
+        {
+            return;
+        }
+        
+        for (DBCondition v_Item : this.conditions)
+        {
+            v_Item.setName(this.name);
+        }
+    }
+    
+    
+    
+    /**
+     * 设置：Fel条件表达式
+     * 
+     * 形式为带占位符的Fel条件，
+     *    如：:c01=='1' && :c02=='2' 
+     *    如：:c01==NULL || :c01==''  判定是否为NULL对象或空字符串
+     *    
+     * 注意：遇到<if>就创建一个新的条件对象，并顺次添加到条件组中。
+     *    
+     * @param i_Condition 
+     */
+    public void setIf(String i_Condition)
+    {
+        this.conditions.add(new DBCondition(this.name ,i_Condition));
+    }
+    
+    
+    
+    /**
+     * 设置：条件满足时的真值。也可以是另一个占位符，但必须以冒号开头。不区分大小写
+     * 
+     * 注意：每次只设置最后一个条件对象的真值。这样才能保证顺次的设置条件组中的多个条件。
+     * 
+     * @param i_TrueValue 
+     */
+    public void setTrue(String i_TrueValue)
+    {
+        if ( Help.isNull(this.conditions) )
+        {
+            throw new NullPointerException("Please set the <if>...</if> first.");
+        }
+        
+        this.conditions.get(this.conditions.size() - 1).setTrueValue(i_TrueValue);
+    }
+    
+    
+    
+    /**
+     * 设置：条件不满足时的假值。也可以是另一个占位符，但必须以冒号开头。不区分大小写
+     * 
+     * 注意：每次只设置最后一个条件对象的假值。这样才能保证顺次的设置条件组中的多个条件。
+     * 
+     * @param i_FalseValue
+     */
+    public void setFalseValue(String i_FalseValue)
+    {
+        if ( Help.isNull(this.conditions) )
+        {
+            throw new NullPointerException("Please set the <if>...</if> first.");
+        }
+        
+        this.conditions.get(this.conditions.size() - 1).setTrueValue(i_FalseValue);
     }
     
     

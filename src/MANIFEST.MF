@@ -1,5 +1,5 @@
 Manifest-Version: 2.4.4
 Created-By: HY.ZhengWei@qq.com  2009
-Specification-Version: 2.4.4  2019-01-19
+Specification-Version: 2.4.4  2019-01-20
 SourceCode: https://github.com/HY-ZhengWei/hy.common.db
 Build-JDK: 1.6
