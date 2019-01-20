@@ -425,7 +425,7 @@ public class DBConditions implements Serializable
      * 
      * @param i_FalseValue
      */
-    public void setFalseValue(String i_FalseValue)
+    public void setFalse(String i_FalseValue)
     {
         if ( Help.isNull(this.conditions) )
         {
