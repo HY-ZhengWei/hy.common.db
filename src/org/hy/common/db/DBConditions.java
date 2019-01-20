@@ -471,8 +471,6 @@ public class DBConditions implements Serializable
             v_Buffer.append(" ) { ");
             v_Buffer.append(v_Condition.getTrue());
             v_Buffer.append(" } else ( ");
-            v_Buffer.append(Help.NVL(v_Condition.getCondition()));
-            v_Buffer.append(" ) { ");
             v_Buffer.append(v_Condition.getFalse());
             v_Buffer.append(" } ");
         }
@@ -484,8 +482,6 @@ public class DBConditions implements Serializable
             v_Buffer.append(" ) { ");
             v_Buffer.append(v_Condition.getTrue());
             v_Buffer.append(" } else ( ");
-            v_Buffer.append(Help.NVL(v_Condition.getCondition()));
-            v_Buffer.append(" ) { ");
             v_Buffer.append(v_Condition.getFalse());
             v_Buffer.append(" } ");
         }
