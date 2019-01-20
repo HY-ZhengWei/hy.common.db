@@ -432,7 +432,7 @@ public class DBConditions implements Serializable
             throw new NullPointerException("Please set the <if>...</if> first.");
         }
         
-        this.conditions.get(this.conditions.size() - 1).setTrueValue(i_FalseValue);
+        this.conditions.get(this.conditions.size() - 1).setFalseValue(i_FalseValue);
     }
     
     
