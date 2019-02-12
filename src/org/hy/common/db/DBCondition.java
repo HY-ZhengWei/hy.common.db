@@ -36,6 +36,8 @@ import com.greenpineyu.fel.context.MapContext;
  * @author      ZhengWei(HY)
  * @createDate  2018-08-03  从XSQLNode中剥离出来，独立后共用。
  * @version     v1.0
+ *              v1.1  2019-02-12  修复：setTrue()方法错误的将 $DefautlTrueValue 判定了两边。
+ *                                      发现人：李浩
  */
 public class DBCondition implements Serializable
 {
@@ -757,9 +759,9 @@ public class DBCondition implements Serializable
             {
                 this.trueValue = $DefautlTrueValue;
             }
-            else if ( $DefautlTrueValue.equalsIgnoreCase(i_TrueValue.trim()) )
+            else if ( $DefaultFalseValue.equalsIgnoreCase(i_TrueValue.trim()) )
             {
-                this.trueValue = $DefautlTrueValue;
+                this.trueValue = $DefaultFalseValue;
             }
         }
     }
@@ -785,9 +787,9 @@ public class DBCondition implements Serializable
             {
                 this.falseValue = $DefautlTrueValue;
             }
-            else if ( $DefautlTrueValue.equalsIgnoreCase(i_FalseValue.trim()) )
+            else if ( $DefaultFalseValue.equalsIgnoreCase(i_FalseValue.trim()) )
             {
-                this.falseValue = $DefautlTrueValue;
+                this.falseValue = $DefaultFalseValue;
             }
         }
     }
