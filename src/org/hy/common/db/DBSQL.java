@@ -86,7 +86,9 @@ import org.hy.common.MethodReflect;
  *              V10.0 2019-01-10  1. 添加：允许个别占位符不去替换数据库关键字(如单引号')。
  *              v11.0 2019-01-19  1. 添加：是否默认为NULL值写入到数据库。针对所有占位符做的统一设置。
  *                                2. 添加：占位符条件组。用于实现Java编程语言中的 if .. else if ... else ... 的多条件复杂判定。
- *                                        建议人：张宇
+ *                                         建议人：张宇
+ *              v12.0 2019-03-06  1. 添加：全局占位符功能。详见 DBSQLStaticParams 类的说明。
+ *                                         建议人：邹德福
  */
 public class DBSQL implements Serializable
 {
@@ -520,8 +522,8 @@ public class DBSQL implements Serializable
                     }
                     
                     /*
-                                            在实现全路径的解释功能之前的老方法  ZhengWei(HY) Del 2015-12-10
-                    Method        v_Method        = MethodReflect.getGetMethod(i_Obj.getClass() ,v_PlaceHolder ,true);
+                    在实现全路径的解释功能之前的老方法  ZhengWei(HY) Del 2015-12-10
+                    Method v_Method = MethodReflect.getGetMethod(i_Obj.getClass() ,v_PlaceHolder ,true);
                     */
                     
                     // 可实现xxx.yyy.www(或getXxx.getYyy.getWww)全路径的解释  ZhengWei(HY) Add 2015-12-10
@@ -535,12 +537,13 @@ public class DBSQL implements Serializable
                         // Nothing.
                     }
                     
-                    if ( v_MethodReflect != null )
+                    Object       v_GetterValue    = null;
+                    DBConditions v_ConditionGroup = null;
+                    try
                     {
-                        try
+                        if ( v_MethodReflect != null )
                         {
-                            Object       v_GetterValue    = null;
-                            DBConditions v_ConditionGroup = Help.getValueIgnoreCase(this.conditions ,v_PlaceHolder);
+                            v_ConditionGroup = Help.getValueIgnoreCase(this.conditions ,v_PlaceHolder);
                             if ( v_ConditionGroup != null )
                             {
                                 // 占位符取值条件  ZhengWei(HY) Add 2018-08-10
@@ -550,103 +553,121 @@ public class DBSQL implements Serializable
                             {
                                 v_GetterValue = v_MethodReflect.invoke();
                             }
-                            
-                            // getter 方法有返回值时
-                            if ( v_GetterValue != null )
+                        }
+                        else  
+                        {
+                            // 全局占位符 ZhengWei(HY) Add 2019-03-06
+                            v_GetterValue = Help.getValueIgnoreCase(DBSQLStaticParams.getInstance() ,v_PlaceHolder);
+                        }
+                    }
+                    catch (Exception exce)
+                    {
+                        exce.printStackTrace();
+                        throw new RuntimeException(exce.getMessage());
+                    }
+                    
+                    try
+                    {
+                        // getter 方法有返回值时
+                        if ( v_GetterValue != null )
+                        {
+                            if ( MethodReflect.class.equals(v_GetterValue.getClass()) )
                             {
-                                if ( MethodReflect.class.equals(v_GetterValue.getClass()) )
+                                boolean v_IsReplace = false;
+                                
+                                // 这里循环的原因是：每次((MethodReflect)v_GetterValue).invoke()执行后的返回值v_MRValue都可能不一样。
+                                while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
                                 {
-                                    boolean v_IsReplace = false;
+                                    // 可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。 ZhengWei(HY) Add 2016-03-18
+                                    Object v_MRValue = ((MethodReflect)v_GetterValue).invoke();
                                     
-                                    // 这里循环的原因是：每次((MethodReflect)v_GetterValue).invoke()执行后的返回值v_MRValue都可能不一样。
-                                    while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
+                                    if ( v_MRValue != null )
                                     {
-                                        // 可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。 ZhengWei(HY) Add 2016-03-18
-                                        Object v_MRValue = ((MethodReflect)v_GetterValue).invoke();
-                                        
-                                        if ( v_MRValue != null )
+                                        if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MRValue.toString()) )
                                         {
-                                            if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MRValue.toString()) )
-                                            {
-                                                v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString());
-                                                v_IsReplace = true;
-                                            }
-                                            else
-                                            {
-                                                throw new DBSQLSafeException(this.getSqlText());
-                                            }
+                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString());
+                                            v_IsReplace = true;
                                         }
                                         else
                                         {
-                                            String v_Value = Help.toObject(((MethodReflect)v_GetterValue).getReturnType()).toString();
-                                            v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
-                                            v_IsReplace = false;  // 为了支持动态占位符，这里设置为false
-                                            // 同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
-                                            
-                                            break;
+                                            throw new DBSQLSafeException(this.getSqlText());
                                         }
                                     }
-                                    
-                                    if ( v_IsReplace )
-                                    {
-                                        v_ReplaceCount++;
-                                    }
-                                }
-                                else
-                                {
-                                    if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
-                                    {
-                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
-                                        v_ReplaceCount++;
-                                    }
                                     else
                                     {
-                                        throw new DBSQLSafeException(this.getSqlText());
+                                        String v_Value = Help.toObject(((MethodReflect)v_GetterValue).getReturnType()).toString();
+                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                        v_IsReplace = false;  // 为了支持动态占位符，这里设置为false
+                                        // 同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
+                                        
+                                        break;
                                     }
                                 }
+                                
+                                if ( v_IsReplace )
+                                {
+                                    v_ReplaceCount++;
+                                }
                             }
-                            // 当占位符对应属性值为NULL时的处理
                             else
                             {
-                                String v_Value = null;
-                                if ( v_ConditionGroup != null || this.defaultNull )
+                                if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
                                 {
-                                    // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
-                                    v_Value = $NULL;
-                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
+                                    v_ReplaceCount++;
                                 }
                                 else
                                 {
-                                    Class<?> v_ReturnType = v_MethodReflect.getReturnType();
-                                    if ( v_ReturnType == null ||  v_ReturnType == String.class )
-                                    {
-                                        v_Value = "";
-                                    }
-                                    else
-                                    {
-                                        v_Value = $NULL;
-                                        v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
-                                    }
-                                    
-                                    // 2018-11-02 Del  废除默认值填充方式
-                                    // v_Value = Help.toObject(v_MethodReflect.getReturnType()).toString();
+                                    throw new DBSQLSafeException(this.getSqlText());
                                 }
-                                
-                                // 这里必须再执行一次填充。因为第一次为 fillMark()，本次为 fillAll() 方法
-                                v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
-                                
-                                // v_ReplaceCount++; 此处不要++，这样才能实现动态占位符的功能。
-                                // 上面的代码同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
                             }
                         }
-                        catch (DBSQLSafeException exce)
+                        // 当占位符对应属性值为NULL时的处理
+                        else
                         {
-                            throw new RuntimeException(exce.getMessage());
+                            String v_Value = null;
+                            if ( v_ConditionGroup != null || this.defaultNull )
+                            {
+                                // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
+                                v_Value = $NULL;
+                                v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                            }
+                            else if ( v_MethodReflect == null )
+                            {
+                                v_Value = $NULL;
+                                v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                            }
+                            else
+                            {
+                                Class<?> v_ReturnType = v_MethodReflect.getReturnType();
+                                if ( v_ReturnType == null ||  v_ReturnType == String.class )
+                                {
+                                    v_Value = "";
+                                }
+                                else
+                                {
+                                    v_Value = $NULL;
+                                    v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                }
+                                
+                                // 2018-11-02 Del  废除默认值填充方式
+                                // v_Value = Help.toObject(v_MethodReflect.getReturnType()).toString();
+                            }
+                            
+                            // 这里必须再执行一次填充。因为第一次为 fillMark()，本次为 fillAll() 方法
+                            v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                            
+                            // v_ReplaceCount++; 此处不要++，这样才能实现动态占位符的功能。
+                            // 上面的代码同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
                         }
-                        catch (Exception exce)
-                        {
-                            exce.printStackTrace();
-                        }
+                    }
+                    catch (DBSQLSafeException exce)
+                    {
+                        throw new RuntimeException(exce.getMessage());
+                    }
+                    catch (Exception exce)
+                    {
+                        exce.printStackTrace();
                     }
                 }
                 
@@ -745,6 +766,12 @@ public class DBSQL implements Serializable
                         else
                         {
                             v_MapValue = MethodReflect.getMapValue(i_Values ,v_PlaceHolder);
+                        }
+                        
+                        // 全局占位符 ZhengWei(HY) Add 2019-03-06
+                        if ( v_MapValue == null )
+                        {
+                            v_MapValue = Help.getValueIgnoreCase(DBSQLStaticParams.getInstance() ,v_PlaceHolder);
                         }
                         
                         if ( v_MapValue != null )

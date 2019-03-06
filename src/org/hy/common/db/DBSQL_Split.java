@@ -38,7 +38,7 @@ public class DBSQL_Split extends SplitSegment
      * placeholders属性为有降序排序顺序的LinkedMap。
      *   用于解决 :A、:AA 同时存在时的混乱。
      * 
-     * Map.key    为占位符。前缀为:符号
+     * Map.key    为占位符。前缀不包含:符号
      * Map.Value  为占位符原文本信息
      */
     private Map<String ,Object> placeholders;
@@ -46,7 +46,7 @@ public class DBSQL_Split extends SplitSegment
     /**
      * 占位符信息的集合（保持占位符原顺序不变）
      * 
-     * Map.key    为占位符。前缀为:符号
+     * Map.key    为占位符。前缀不包含:符号
      * Map.Value  为占位符原文本信息
      */
     private Map<String ,Object> placeholdersSequence;
