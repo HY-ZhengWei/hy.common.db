@@ -1011,8 +1011,198 @@ public class DBSQL implements Serializable
      */
     public String getSQL()
     {
-        // 具体功能待后期实现
-        return this.sqlText;
+        if ( Help.isNull(this.segments) )
+        {
+            return this.sqlText;
+        }
+        
+        
+        StringBuilder         v_SQL     = new StringBuilder();
+        Iterator<DBSQL_Split> v_Ierator = this.segments.iterator();
+
+        // 不再区分 $DBSQL_TYPE_INSERT 类型，使所有的SQL类型均采有相同的占位符填充逻辑。ZhengWei(HY) Edit 2018-06-06
+        while ( v_Ierator.hasNext() )
+        {
+            DBSQL_Split         v_DBSQL_Segment = v_Ierator.next();
+            Map<String ,Object> v_Placeholders  = v_DBSQL_Segment.getPlaceholders();
+            
+            if ( Help.isNull(v_Placeholders) )
+            {
+                v_SQL.append(v_DBSQL_Segment.getInfo());
+            }
+            else
+            {
+                Iterator<String> v_IterPlaceholders = v_Placeholders.keySet().iterator();
+                String           v_Info             = v_DBSQL_Segment.getInfo();
+                int              v_ReplaceCount     = 0;
+                
+                while ( v_IterPlaceholders.hasNext() )
+                {
+                    String v_PlaceHolder = v_IterPlaceholders.next();
+                    
+                    // 排除不是占位符的变量，但它的形式可能是占位符的形式。ZhengWei(HY) Add 2018-06-14
+                    if ( this.notPlaceholders.contains(v_PlaceHolder) )
+                    {
+                        v_ReplaceCount++;
+                        continue;
+                    }
+                    
+                    try
+                    {
+                        Object v_MapValue = null;
+                        
+                        // 全局占位符 ZhengWei(HY) Add 2019-03-06
+                        if ( v_MapValue == null )
+                        {
+                            v_MapValue = Help.getValueIgnoreCase(DBSQLStaticParams.getInstance() ,v_PlaceHolder);
+                        }
+                        
+                        if ( v_MapValue != null )
+                        {
+                            if ( MethodReflect.class.equals(v_MapValue.getClass()) )
+                            {
+                                boolean v_IsReplace = false;
+                                
+                                while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
+                                {
+                                    // 可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。 ZhengWei(HY) Add 2016-03-18
+                                    Object v_GetterValue = ((MethodReflect)v_MapValue).invoke();
+                                    
+                                    // getter 方法有返回值时
+                                    if ( v_GetterValue != null )
+                                    {
+                                        if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
+                                        {
+                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
+                                            v_IsReplace = true;
+                                        }
+                                        else
+                                        {
+                                            throw new DBSQLSafeException(this.getSqlText());
+                                        }
+                                    }
+                                    else
+                                    {
+                                        String v_Value = null;
+                                        if ( this.defaultNull )
+                                        {
+                                            // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
+                                            v_Value = $NULL;
+                                            v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                        }
+                                        else
+                                        {
+                                            Class<?> v_ReturnType = ((MethodReflect)v_MapValue).getReturnType();
+                                            if ( v_ReturnType == null ||  v_ReturnType == String.class )
+                                            {
+                                                v_Value = "";
+                                            }
+                                            else
+                                            {
+                                                v_Value = $NULL;
+                                                v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                            }
+                                            
+                                            // 2018-11-02 Del  废除默认值填充方式
+                                            // v_Value = Help.toObject(((MethodReflect)v_MapValue).getReturnType()).toString();
+                                        }
+                                        
+                                        // 这里必须再执行一次填充。因为第一次为 fillMark()，本次为 fillAll() 方法
+                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                        
+                                        v_IsReplace = false;  // 为了支持动态占位符，这里设置为false
+                                        // 同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
+                                        
+                                        break;
+                                    }
+                                }
+                                
+                                if ( v_IsReplace )
+                                {
+                                    v_ReplaceCount++;
+                                }
+                            }
+                            else
+                            {
+                                if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MapValue.toString()) )
+                                {
+                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString());
+                                    v_ReplaceCount++;
+                                }
+                                else
+                                {
+                                    return "";
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // 对于没有<[ ]>可选分段的SQL
+                            if ( 1 == this.segments.size() )
+                            {
+                                if ( this.defaultNull )
+                                {
+                                    // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
+                                    String v_Value = $NULL;
+                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                    v_Info = this.dbSQLFill.fillAll    (v_Info ,v_PlaceHolder ,v_Value);
+                                }
+                                else
+                                {
+                                    v_Info = this.dbSQLFill.fillSpace(v_Info ,v_PlaceHolder);
+                                }
+                                v_ReplaceCount++;
+                            }
+                            else
+                            {
+                                String v_Value = null;
+                                if ( this.defaultNull )
+                                {
+                                    // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
+                                    v_Value = $NULL;
+                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                }
+                                else
+                                {
+                                    v_Value = "";
+                                }
+                                
+                                // 这里必须再执行一次填充。因为第一次为 fillMark()，本次为 fillAll() 方法
+                                v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                            }
+                        }
+                    }
+                    catch (DBSQLSafeException exce)
+                    {
+                        throw new RuntimeException(exce.getMessage());
+                    }
+                    catch (Exception exce)
+                    {
+                        exce.printStackTrace();
+                    }
+                }
+                
+                if ( InfoType.$TextInfo == v_DBSQL_Segment.getInfoType() )
+                {
+                    v_SQL.append(v_Info);
+                }
+                else if ( v_ReplaceCount == v_DBSQL_Segment.getPlaceholderSize() )
+                {
+                    v_SQL.append(v_Info);
+                }
+            }
+        }
+        
+        // 2018-03-22  优化：完善安全检查防止SQL注入，将'--形式的SQL放在整体SQL来判定。
+        String v_SQLRet = v_SQL.toString();
+        if ( DBSQLSafe.isSafe_SQLComment(v_SQLRet) )
+        {
+            return v_SQLRet;
+        }
+        else
+        {
+            throw new RuntimeException(DBSQLSafe.sqlAttackLog(v_SQLRet));
+        }
     }
     
     
