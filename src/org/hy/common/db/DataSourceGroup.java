@@ -1,6 +1,7 @@
 package org.hy.common.db;
 
 import java.io.Serializable;
+import java.lang.reflect.Method;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ import org.hy.common.XJavaID;
  *              v5.0   2017-07-12  添加：isException() 异常状态标记，可通过 http://IP:Port/WebName/analyses/analyseObject?DSG=Y 页面全局查看所有的数据库连接池组信息（支持集群）。
  *                                 添加：统一第三监控接口
  *              v6.0   2018-03-09  添加：实现XJavaID接口，在数据库异常时，能更精确的报出异常的数据库是谁。
+ *              v7.0   2019-03-12  添加：获取数据库连接信息。
  */
 public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJavaID ,Serializable
 {
@@ -75,6 +77,9 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     /** 数据库产品类型 */
     private String             dbProductType;
     
+    /** 数据库连接信息 */
+    private List<String>       dbURLs;
+    
     /** 是否执行了允许重新获取数据库连接的方法（主要用于主备数据库都出现异常时） */
     private boolean            isRunReConn;
     
@@ -89,7 +94,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     
     /** 连接使用峰值（不包括连接池中预先初始化的连接数量） */
     private long               connMaxUseCount;
-	
+    
 	
 	
 	public DataSourceGroup()
@@ -383,6 +388,104 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     {
         this.getDBProductInfo();
         return dbProductType;
+    }
+    
+    
+    
+    /**
+     * 获取数据库连接信息（只有IP地址、端口、数据库名称等，不涉及其它安全信息）。
+     * 
+     * 如：jdbc:oracle:thin:@127.0.0.1:1521:数据库实例名称
+     *     jdbc:mysql://127.0.0.1:3306/数据库实例名称?useUnicode=true&characterEncoding=utf-8
+     *     jtds:sqlserver://127.0.0.1:1433;DatabaseName=数据库实例名称
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2019-03-12
+     * @version     v1.0
+     *
+     * @return
+     */
+    public synchronized List<String> getUrls()
+    {
+        if ( !Help.isNull(this.dbURLs) )
+        {
+            return this.dbURLs;
+        }
+        
+        this.dbURLs = new ArrayList<String>();
+        
+        if ( !Help.isNull(this.dataSources) )
+        {
+            for (DataSource v_DS : this.dataSources)
+            {
+                boolean   v_IsFind  = false;
+                Method [] v_Methods = v_DS.getClass().getMethods();
+                
+                // 先尝试猜想
+                if ( !Help.isNull(v_Methods) )
+                {
+                    for (Method v_Item : v_Methods)
+                    {
+                        String v_Name = v_Item.getName().toLowerCase();
+                        
+                        if ( v_Name.startsWith("get") && (v_Name.indexOf("url")  >= 0 || v_Name.indexOf("jdbc") >= 0) )
+                        {
+                            if ( v_Item.getParameterTypes().length == 0 )
+                            {
+                                try
+                                {
+                                    Object v_Value = v_Item.invoke(v_DS);
+                                    if ( v_Value != null && !Help.isNull(v_Value.toString()) )
+                                    {
+                                        this.dbURLs.add(v_Value.toString());
+                                        v_IsFind = true;
+                                    }
+                                }
+                                catch (Exception exce)
+                                {
+                                    exce.printStackTrace();
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 没猜出来，再通过数据库连接获取
+                if ( !v_IsFind )
+                {
+                    java.sql.Connection v_Conn = null;
+                    try
+                    {
+                        v_Conn = v_DS.getConnection();
+                        DatabaseMetaData v_DBMeta = v_Conn.getMetaData();
+                        if ( v_DBMeta != null && !Help.isNull(v_DBMeta.getURL()) )
+                        {
+                            this.dbURLs.add(v_DBMeta.getURL());
+                        }
+                    }
+                    catch (Exception exce)
+                    {
+                        exce.printStackTrace();
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            if ( v_Conn != null )
+                            {
+                                v_Conn.close();
+                            }
+                        }
+                        catch (Exception exce)
+                        {
+                            // Nothing.
+                        }
+                    }
+                }
+            }
+        }
+        
+        return this.dbURLs;
     }
 
 
