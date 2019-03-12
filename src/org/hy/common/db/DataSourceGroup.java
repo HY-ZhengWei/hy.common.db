@@ -407,7 +407,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
      */
     public synchronized List<String> getUrls()
     {
-        if ( !Help.isNull(this.dbURLs) )
+        if ( !Help.isNull(this.dbURLs) && this.dbURLs.size() == this.dataSources.size() )
         {
             return this.dbURLs;
         }
