@@ -234,6 +234,10 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
         try
         {
             v_Conn = this.getConnection();
+            if ( v_Conn == null )
+            {
+                return;
+            }
             DatabaseMetaData v_DBMetaData = v_Conn.getMetaData();
             
             this.dbProductName    = v_DBMetaData.getDatabaseProductName();  
@@ -457,10 +461,13 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
                     try
                     {
                         v_Conn = v_DS.getConnection();
-                        DatabaseMetaData v_DBMeta = v_Conn.getMetaData();
-                        if ( v_DBMeta != null && !Help.isNull(v_DBMeta.getURL()) )
+                        if ( v_Conn != null )
                         {
-                            this.dbURLs.add(v_DBMeta.getURL());
+                            DatabaseMetaData v_DBMeta = v_Conn.getMetaData();
+                            if ( v_DBMeta != null && !Help.isNull(v_DBMeta.getURL()) )
+                            {
+                                this.dbURLs.add(v_DBMeta.getURL());
+                            }
                         }
                     }
                     catch (Exception exce)
