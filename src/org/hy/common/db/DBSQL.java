@@ -1083,37 +1083,7 @@ public class DBSQL implements Serializable
                                     }
                                     else
                                     {
-                                        String v_Value = null;
-                                        if ( this.defaultNull )
-                                        {
-                                            // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
-                                            v_Value = $NULL;
-                                            v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
-                                        }
-                                        else
-                                        {
-                                            Class<?> v_ReturnType = ((MethodReflect)v_MapValue).getReturnType();
-                                            if ( v_ReturnType == null ||  v_ReturnType == String.class )
-                                            {
-                                                v_Value = "";
-                                            }
-                                            else
-                                            {
-                                                v_Value = $NULL;
-                                                v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
-                                            }
-                                            
-                                            // 2018-11-02 Del  废除默认值填充方式
-                                            // v_Value = Help.toObject(((MethodReflect)v_MapValue).getReturnType()).toString();
-                                        }
-                                        
-                                        // 这里必须再执行一次填充。因为第一次为 fillMark()，本次为 fillAll() 方法
-                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
-                                        
-                                        v_IsReplace = false;  // 为了支持动态占位符，这里设置为false
-                                        // 同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
-                                        
-                                        break;
+                                        // 因为没有执行参数，所以不做任何替换  2019-03-13
                                     }
                                 }
                                 
@@ -1137,39 +1107,7 @@ public class DBSQL implements Serializable
                         }
                         else
                         {
-                            // 对于没有<[ ]>可选分段的SQL
-                            if ( 1 == this.segments.size() )
-                            {
-                                if ( this.defaultNull )
-                                {
-                                    // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
-                                    String v_Value = $NULL;
-                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
-                                    v_Info = this.dbSQLFill.fillAll    (v_Info ,v_PlaceHolder ,v_Value);
-                                }
-                                else
-                                {
-                                    v_Info = this.dbSQLFill.fillSpace(v_Info ,v_PlaceHolder);
-                                }
-                                v_ReplaceCount++;
-                            }
-                            else
-                            {
-                                String v_Value = null;
-                                if ( this.defaultNull )
-                                {
-                                    // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
-                                    v_Value = $NULL;
-                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
-                                }
-                                else
-                                {
-                                    v_Value = "";
-                                }
-                                
-                                // 这里必须再执行一次填充。因为第一次为 fillMark()，本次为 fillAll() 方法
-                                v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
-                            }
+                            // 因为没有执行参数，所以不做任何替换  2019-03-13
                         }
                     }
                     catch (DBSQLSafeException exce)

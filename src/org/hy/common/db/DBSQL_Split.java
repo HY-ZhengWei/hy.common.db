@@ -23,6 +23,9 @@ import org.hy.common.StringHelp;
  *              v3.0  2014-10-08  placeholders属性为有降序排序顺序的LinkedMap。
  *                                用于解决 :A、:AA 同时存在时的混乱。
  *              v4.0  2015-12-10  支持 :A.B.C 的解释（对点.的解释）。
+ *              v5.0  2019-03-13  添加：占位符命名要求严格的规则。
+ *                                      规则：占位符的命名，不能是小于等于2位的纯数字
+ *                                             防止将类似于时间格式 00:00:00 的字符解释为占位符 
  * @createDate  2012-10-30
  */
 public class DBSQL_Split extends SplitSegment
@@ -84,7 +87,7 @@ public class DBSQL_Split extends SplitSegment
             return;
         }
         
-        this.placeholdersSequence = StringHelp.parsePlaceholdersSequence(this.info);
+        this.placeholdersSequence = StringHelp.parsePlaceholdersSequence(this.info ,true);
         this.placeholders         = Help.toReverse(this.placeholdersSequence);
     }
     
