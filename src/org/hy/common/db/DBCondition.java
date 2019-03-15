@@ -683,7 +683,7 @@ public class DBCondition implements Serializable
         
         if ( !Help.isNull(this.condition) )
         {
-            this.placeholders = StringHelp.parsePlaceholders(this.condition);
+            this.placeholders = Help.toReverse(StringHelp.parsePlaceholders(this.condition ,true));
             
             for (String v_Key : this.placeholders.keySet())
             {
