@@ -7,6 +7,8 @@ package org.hy.common.db;
 /**
  * 字段名称的样式
  * 
+ * 注：对不区别字段名称大小写的数据库（如Oracle）无效。
+ * 
  * @author      ZhengWei(HY)
  * @version     v1.0  
  * @createDate  2015-10-09
