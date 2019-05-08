@@ -100,7 +100,7 @@ public class DBSQLTest
 		v_Test.setStatue(   2012);
 		v_Test.setUserName("HY");
 		
-		System.out.println(v_DBSQL.getSQL(v_Test));
+		System.out.println(v_DBSQL.getSQL(v_Test ,null));
 		System.out.println(v_DBSQL.getSQLType());
 		
 		
@@ -149,7 +149,7 @@ public class DBSQLTest
 		//v_Values.put("ContactID" ,"201210310001");
 		
 		System.out.println();
-		System.out.println(v_DBSQL.getSQL(v_Values));
+		System.out.println(v_DBSQL.getSQL(v_Values ,null));
 		System.out.println("无填充项的情况：" + v_DBSQL.getSQL());
 	}
 	

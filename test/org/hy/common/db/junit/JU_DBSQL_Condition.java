@@ -57,7 +57,7 @@ public class JU_DBSQL_Condition
         
         DBSQL v_DBSQL = createDBSQL();
         
-        String v_SQL = v_DBSQL.getSQL(v_Params);
+        String v_SQL = v_DBSQL.getSQL(v_Params ,null);
         
         System.out.println("查询参数条件：");
         Help.print(v_Params);
@@ -90,7 +90,7 @@ public class JU_DBSQL_Condition
         
         DBSQL v_DBSQL = createDBSQL();
         
-        String v_SQL = v_DBSQL.getSQL(v_Params);
+        String v_SQL = v_DBSQL.getSQL(v_Params ,null);
         
         System.out.println("查询参数条件：");
         Help.print(v_Params);

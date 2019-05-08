@@ -89,6 +89,9 @@ import org.hy.common.MethodReflect;
  *                                         建议人：张宇
  *              v12.0 2019-03-06  1. 添加：全局占位符功能。详见 DBSQLStaticParams 类的说明。
  *                                         建议人：邹德福
+ *              v13.0 2019-05-08  1. 添加：对MySQL数据库添加\号的转义。\号本身就是MySQL数据库的转义符。
+ *                                         但写入文本信息时，\号多数时是想被直接当普通符号写入到数据库中。
+ *                                         发现人：程志华
  */
 public class DBSQL implements Serializable
 {
@@ -138,6 +141,8 @@ public class DBSQL implements Serializable
     }
     
     
+    /** 数据库连接池组 */
+    private DataSourceGroup           dsg;
     
     /** 占位符SQL */
     private String                    sqlText;
@@ -470,8 +475,28 @@ public class DBSQL implements Serializable
      * @param i_Obj
      * @return
      */
-    @SuppressWarnings("unchecked")
     public String getSQL(Object i_Obj)
+    {
+        return this.getSQL(i_Obj ,this.dsg);
+    }
+    
+    
+    
+    /**
+     * 获取可执行的SQL语句，并按 i_Obj 填充有数值。
+     * 
+     * 入参类型是Map时，在处理NULL与入参类型是Object，是不同的。
+     *   1. Map填充为""空的字符串。
+     *   2. Object填充为 "NULL" ，可以支持空值针的写入。
+     *   
+     *   但上方两种均可以通过配置<condition><name>占位符名称<name></condition>，向数据库写入空值针。
+     * 
+     * @param i_Obj
+     * @param i_DSG  数据库连接池组。可为空或NULL
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public String getSQL(Object i_Obj ,DataSourceGroup i_DSG)
     {
         if ( i_Obj == null )
         {
@@ -485,9 +510,14 @@ public class DBSQL implements Serializable
         
         if ( i_Obj instanceof Map )
         {
-            return this.getSQL((Map<String ,?>)i_Obj);
+            return this.getSQL((Map<String ,?>)i_Obj ,i_DSG);
         }
         
+        String v_DBType = null;
+        if ( i_DSG != null )
+        {
+            v_DBType = i_DSG.getDbProductType();
+        }
         
         StringBuilder         v_SQL     = new StringBuilder();
         Iterator<DBSQL_Split> v_Ierator = this.segments.iterator();
@@ -585,7 +615,7 @@ public class DBSQL implements Serializable
                                     {
                                         if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MRValue.toString()) )
                                         {
-                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString());
+                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString() ,v_DBType);
                                             v_IsReplace = true;
                                         }
                                         else
@@ -596,7 +626,7 @@ public class DBSQL implements Serializable
                                     else
                                     {
                                         String v_Value = Help.toObject(((MethodReflect)v_GetterValue).getReturnType()).toString();
-                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                                         v_IsReplace = false;  // 为了支持动态占位符，这里设置为false
                                         // 同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
                                         
@@ -613,7 +643,7 @@ public class DBSQL implements Serializable
                             {
                                 if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
                                 {
-                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
+                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString() ,v_DBType);
                                     v_ReplaceCount++;
                                 }
                                 else
@@ -630,12 +660,12 @@ public class DBSQL implements Serializable
                             {
                                 // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                 v_Value = $NULL;
-                                v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                             }
                             else if ( v_MethodReflect == null )
                             {
                                 v_Value = $NULL;
-                                v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                             }
                             else
                             {
@@ -647,7 +677,7 @@ public class DBSQL implements Serializable
                                 else
                                 {
                                     v_Value = $NULL;
-                                    v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                    v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                                 }
                                 
                                 // 2018-11-02 Del  废除默认值填充方式
@@ -655,7 +685,7 @@ public class DBSQL implements Serializable
                             }
                             
                             // 这里必须再执行一次填充。因为第一次为 fillMark()，本次为 fillAll() 方法
-                            v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                            v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                             
                             // v_ReplaceCount++; 此处不要++，这样才能实现动态占位符的功能。
                             // 上面的代码同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
@@ -696,6 +726,7 @@ public class DBSQL implements Serializable
     
     
     
+    
     /**
      * 获取可执行的SQL语句，并按 Map<String ,Object> 填充有数值。
      * 
@@ -713,6 +744,29 @@ public class DBSQL implements Serializable
      */
     public String getSQL(Map<String ,?> i_Values)
     {
+        return this.getSQL(i_Values ,this.dsg);
+    }
+    
+    
+    
+    /**
+     * 获取可执行的SQL语句，并按 Map<String ,Object> 填充有数值。
+     * 
+     * Map.key  即为占位符。
+     *     2016-03-16 将不再区分大小写的模式配置参数。
+     *     
+     * 入参类型是Map时，在处理NULL与入参类型是Object，是不同的。
+     *   1. Map填充为""空的字符串。
+     *   2. Object填充为 "NULL" ，可以支持空值针的写入。
+     *   
+     *   但上方两种均可以通过配置<condition><name>占位符名称<name></condition>，向数据库写入空值针。
+     * 
+     * @param i_Obj
+     * @param i_DSG  数据库连接池组。可为空或NULL
+     * @return
+     */
+    public String getSQL(Map<String ,?> i_Values ,DataSourceGroup i_DSG)
+    {
         if ( i_Values == null )
         {
             return null;
@@ -723,6 +777,11 @@ public class DBSQL implements Serializable
             return this.sqlText;
         }
         
+        String v_DBType = null;
+        if ( i_DSG != null )
+        {
+            v_DBType = i_DSG.getDbProductType();
+        }
         
         StringBuilder         v_SQL     = new StringBuilder();
         Iterator<DBSQL_Split> v_Ierator = this.segments.iterator();
@@ -790,7 +849,7 @@ public class DBSQL implements Serializable
                                     {
                                         if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
                                         {
-                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
+                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString() ,v_DBType);
                                             v_IsReplace = true;
                                         }
                                         else
@@ -805,7 +864,7 @@ public class DBSQL implements Serializable
                                         {
                                             // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                             v_Value = $NULL;
-                                            v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                            v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                                         }
                                         else
                                         {
@@ -817,7 +876,7 @@ public class DBSQL implements Serializable
                                             else
                                             {
                                                 v_Value = $NULL;
-                                                v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                                v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                                             }
                                             
                                             // 2018-11-02 Del  废除默认值填充方式
@@ -825,7 +884,7 @@ public class DBSQL implements Serializable
                                         }
                                         
                                         // 这里必须再执行一次填充。因为第一次为 fillMark()，本次为 fillAll() 方法
-                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                                         
                                         v_IsReplace = false;  // 为了支持动态占位符，这里设置为false
                                         // 同时也替换占位符，可对不是动态占位符的情况，也初始化值。  ZhengWei(HY) 2018-06-06
@@ -843,7 +902,7 @@ public class DBSQL implements Serializable
                             {
                                 if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MapValue.toString()) )
                                 {
-                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString());
+                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString() ,v_DBType);
                                     v_ReplaceCount++;
                                 }
                                 else
@@ -861,8 +920,8 @@ public class DBSQL implements Serializable
                                 {
                                     // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                     String v_Value = $NULL;
-                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
-                                    v_Info = this.dbSQLFill.fillAll    (v_Info ,v_PlaceHolder ,v_Value);
+                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
+                                    v_Info = this.dbSQLFill.fillAll    (v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                                 }
                                 else
                                 {
@@ -877,7 +936,7 @@ public class DBSQL implements Serializable
                                 {
                                     // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                     v_Value = $NULL;
-                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value);
+                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                                 }
                                 else
                                 {
@@ -885,7 +944,7 @@ public class DBSQL implements Serializable
                                 }
                                 
                                 // 这里必须再执行一次填充。因为第一次为 fillMark()，本次为 fillAll() 方法
-                                v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                             }
                         }
                     }
@@ -1011,11 +1070,29 @@ public class DBSQL implements Serializable
      */
     public String getSQL()
     {
+        return this.getSQL(this.dsg);
+    }
+    
+    
+    
+    /**
+     * 获取可执行的SQL语句，无填充项的情况。
+     * 
+     * @param i_DSG  数据库连接池组。可为空或NULL
+     * @return
+     */
+    public String getSQL(DataSourceGroup i_DSG)
+    {
         if ( Help.isNull(this.segments) )
         {
             return this.sqlText;
         }
         
+        String v_DBType = null;
+        if ( i_DSG != null )
+        {
+            v_DBType = i_DSG.getDbProductType();
+        }
         
         StringBuilder         v_SQL     = new StringBuilder();
         Iterator<DBSQL_Split> v_Ierator = this.segments.iterator();
@@ -1073,7 +1150,7 @@ public class DBSQL implements Serializable
                                     {
                                         if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
                                         {
-                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString());
+                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString() ,v_DBType);
                                             v_IsReplace = true;
                                         }
                                         else
@@ -1096,7 +1173,7 @@ public class DBSQL implements Serializable
                             {
                                 if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MapValue.toString()) )
                                 {
-                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString());
+                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString() ,v_DBType);
                                     v_ReplaceCount++;
                                 }
                                 else
@@ -1449,6 +1526,28 @@ public class DBSQL implements Serializable
     }
 
 
+    
+    /**
+     * 获取：数据库连接池组
+     */
+    public DataSourceGroup getDataSourceGroup()
+    {
+        return dsg;
+    }
+
+
+    
+    /**
+     * 设置：数据库连接池组
+     * 
+     * @param i_DataSourceGroup 
+     */
+    public void setDataSourceGroup(DataSourceGroup i_DataSourceGroup)
+    {
+        this.dsg = i_DataSourceGroup;
+    }
+
+
 
     public String toString()
     {
@@ -1497,9 +1596,10 @@ interface DBSQLFill
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
      * @return
      */
-    public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value);
+    public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType);
     
     
     
@@ -1515,9 +1615,10 @@ interface DBSQLFill
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
      * @return
      */
-    public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value);
+    public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType);
     
     
     
@@ -1533,9 +1634,10 @@ interface DBSQLFill
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
      * @return
      */
-    public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value);
+    public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType);
     
     
     
@@ -1601,9 +1703,10 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
      * @return
      */
-    public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value)
+    public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,i_Value);
     }
@@ -1622,9 +1725,10 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
      * @return
      */
-    public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value)
+    public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,i_Value);
     }
@@ -1643,9 +1747,10 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
      * @return
      */
-    public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value)
+    public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         return StringHelp.replaceAll(i_Info ,"':" + i_PlaceHolder + "'" ,i_Value);
     }
@@ -1661,6 +1766,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      *
      * @param i_Info
      * @param i_PlaceHolder
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
      * @return
      */
     public String fillSpace(String i_Info ,String i_PlaceHolder)
@@ -1688,9 +1794,13 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
 {
     private static final long serialVersionUID = 3135504177775635847L;
 
-    public  static final String    $FillReplace   = "'";
+    public  static final String    $FillReplace         = "'";
     
-    public  static final String    $FillReplaceBy = "''";
+    public  static final String    $FillReplaceBy       = "''";
+    
+    public  static final String [] $FillReplace_MySQL   = {"'"  ,"\\"};    // MySQL 数据库中的 \ 号是转义符
+    
+    public  static final String [] $FillReplaceBy_MySQL = {"''" ,"\\\\"};
     
     private static       DBSQLFill $MySelf;
     
@@ -1738,15 +1848,23 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
      * @return
      */
-    public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value)
+    public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         try
         {
             if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
             {
-                return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+                if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
+                {
+                    return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL));
+                }
+                else
+                {
+                    return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+                }
             }
             else
             {
@@ -1757,7 +1875,14 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         {
             if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
             {
-                return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+                if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
+                {
+                    return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL)));
+                }
+                else
+                {
+                    return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+                }
             }
             else
             {
@@ -1780,15 +1905,23 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
      * @return
      */
-    public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value)
+    public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         try
         {
             if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
             {
-                return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+                if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
+                {
+                    return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL));
+                }
+                else
+                {
+                    return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+                }
             }
             else
             {
@@ -1799,7 +1932,14 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         {
             if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
             {
-                return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+                if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
+                {
+                    return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL)));
+                }
+                else
+                {
+                    return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+                }
             }
             else
             {
@@ -1822,9 +1962,10 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
      * @return
      */
-    public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value)
+    public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         String v_PH = "':" + i_PlaceHolder + "'";
         
@@ -1832,7 +1973,14 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         {
             if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
             {
-                return StringHelp.replaceAll(i_Info ,v_PH ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+                if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
+                {
+                    return StringHelp.replaceAll(i_Info ,v_PH ,StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL));
+                }
+                else
+                {
+                    return StringHelp.replaceAll(i_Info ,v_PH ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+                }
             }
             else
             {
@@ -1843,7 +1991,14 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         {
             if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
             {
-                return StringHelp.replaceAll(i_Info ,v_PH ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+                if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
+                {
+                    return StringHelp.replaceAll(i_Info ,v_PH ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL)));
+                }
+                else
+                {
+                    return StringHelp.replaceAll(i_Info ,v_PH ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+                }
             }
             else
             {

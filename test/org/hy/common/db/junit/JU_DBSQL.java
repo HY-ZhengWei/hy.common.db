@@ -65,8 +65,8 @@ public class JU_DBSQL
         String v_SQL = "UPDATE HY SET Name = ':inner.beginTime' WHERE ID = ':id'";
         DBSQL v_DBSQL = new DBSQL(v_SQL);
         
-        System.out.println(v_DBSQL.getSQL(v_Data));
-        System.out.println(v_DBSQL.getSQL(Help.toMap(v_Data)));
+        System.out.println(v_DBSQL.getSQL(v_Data ,null));
+        System.out.println(v_DBSQL.getSQL(Help.toMap(v_Data) ,null));
         
         DBPreparedSQL v_PreparedSQL = v_DBSQL.getPreparedSQL();
         System.out.println(v_PreparedSQL.getSQL());
