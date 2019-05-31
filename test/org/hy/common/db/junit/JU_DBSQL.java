@@ -73,4 +73,27 @@ public class JU_DBSQL
         Help.print(v_PreparedSQL.getPlaceholders());
     }
     
+    
+    
+    @Test
+    public void test_XX01_XX02() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException
+    {
+        JU_DBSQL v_Data = new JU_DBSQL();
+        
+        v_Data.setId("123456");
+        v_Data.inner = new DBSQLTest();
+        v_Data.inner.setUserName("ZhengWei");
+        v_Data.inner.setBeginTime(new Date());
+        
+        String v_SQL = "UPDATE HY SET Name = ':inner.beginTime' WHERE ID = ':id' AND Name = ':inner.userName' AND Name = '<[:inner.userName]>01' AND Name = '<[:inner.userName]>02'";
+        DBSQL v_DBSQL = new DBSQL(v_SQL);
+        
+        System.out.println(v_DBSQL.getSQL(v_Data ,null));
+        System.out.println(v_DBSQL.getSQL(Help.toMap(v_Data) ,null));
+        
+        DBPreparedSQL v_PreparedSQL = v_DBSQL.getPreparedSQL();
+        System.out.println(v_PreparedSQL.getSQL());
+        Help.print(v_PreparedSQL.getPlaceholders());
+    }
+    
 }

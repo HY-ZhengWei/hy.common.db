@@ -92,6 +92,9 @@ import org.hy.common.MethodReflect;
  *              v13.0 2019-05-08  1. 添加：对MySQL数据库添加\号的转义。\号本身就是MySQL数据库的转义符。
  *                                         但写入文本信息时，\号多数时是想被直接当普通符号写入到数据库中。
  *                                         发现人：程志华
+ *              v14.0 2019-05-31  1. 添加：使用<[]>来限定占位符的前后位置，格式如， <[:占位符]>
+ *                                         即可实现占位符后拼接字符串的功能，如，<[:占位符]>xxx
+ *                                         建议人：张顺
  */
 public class DBSQL implements Serializable
 {
@@ -247,8 +250,8 @@ public class DBSQL implements Serializable
             DBSQL_Split v_DBSQL_Segment = new DBSQL_Split(v_SplitSegment);
             
             String v_Info = v_DBSQL_Segment.getInfo();
-            v_Info = v_Info.replaceFirst("<\\[" ,"  ");
-            v_Info = v_Info.replaceFirst("\\]>" ,"  ");
+            v_Info = v_Info.replaceFirst("<\\[" ,"");
+            v_Info = v_Info.replaceFirst("\\]>" ,"");
             
             v_DBSQL_Segment.setInfo(v_Info);
             v_DBSQL_Segment.parsePlaceholders();
