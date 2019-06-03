@@ -206,7 +206,7 @@ public class DBSQL implements Serializable
         this.safeCheck    = true;
         this.conditions   = new HashMap<String ,DBConditions>();
         this.defaultNull  = false;
-        this.setNotPlaceholders("MI,SS");
+        this.setNotPlaceholders("MI,SS,mi,ss");
         this.setKeyReplace(false);
     }
     
