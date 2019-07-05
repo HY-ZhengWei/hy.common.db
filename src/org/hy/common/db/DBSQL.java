@@ -95,6 +95,7 @@ import org.hy.common.MethodReflect;
  *              v14.0 2019-05-31  1. 添加：使用<[]>来限定占位符的前后位置，格式如， <[:占位符]>
  *                                         即可实现占位符后拼接字符串的功能，如，<[:占位符]>xxx
  *                                         建议人：张顺
+ *              v15.0 2019-07-05  1. 修改：keyReplace的默认值改为true。默认替换特殊字符
  */
 public class DBSQL implements Serializable
 {
@@ -156,7 +157,7 @@ public class DBSQL implements Serializable
     /** SQL语句操作的表名称。用于Insert、Update语句 */
     private String                    sqlTableName;
     
-    /** 替换数据库关键字。如，单引号替换成两个单引号。默认为：false，即不替换 */
+    /** 替换数据库关键字。如，单引号替换成两个单引号。默认为：true，即不替换 */
     private boolean                   keyReplace;
     
     /** 当this.keyReplace=true时有效。表示个别不替换数据库关键字的占位符。前缀无须冒号 */
@@ -207,7 +208,7 @@ public class DBSQL implements Serializable
         this.conditions   = new HashMap<String ,DBConditions>();
         this.defaultNull  = false;
         this.setNotPlaceholders("MI,SS,mi,ss");
-        this.setKeyReplace(false);
+        this.setKeyReplace(true);
     }
     
     
@@ -1255,7 +1256,7 @@ public class DBSQL implements Serializable
     
 
     /**
-     * 获取：替换数据库关键字。如，单引号替换成两个单引号。默认为：false，即不替换
+     * 获取：替换数据库关键字。如，单引号替换成两个单引号。默认为：true，即不替换
      */
     public boolean isKeyReplace()
     {
@@ -1265,7 +1266,7 @@ public class DBSQL implements Serializable
 
     
     /**
-     * 设置：替换数据库关键字。如，单引号替换成两个单引号。默认为：false，即不替换
+     * 设置：替换数据库关键字。如，单引号替换成两个单引号。默认为：true，即不替换
      * 
      * 采用类似工厂方法构造 DBSQLFill，惟一的目的就是为了生成SQL时，减少IF判断，提高速度。
      * 
