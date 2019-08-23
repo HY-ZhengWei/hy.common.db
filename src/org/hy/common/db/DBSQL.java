@@ -96,6 +96,8 @@ import org.hy.common.MethodReflect;
  *                                         即可实现占位符后拼接字符串的功能，如，<[:占位符]>xxx
  *                                         建议人：张顺
  *              v15.0 2019-07-05  1. 修改：keyReplace的默认值改为true。默认替换特殊字符
+ *              v15.1 2019-08-23  1. 添加：是否允许替换字符串。防止如：'A' ,'B' ,'C' ... ,'Z'  这样格式的字符串被替换。
+ *                                         一般用于由外界动态生成的在 IN 语法中，如 IN ('A' ,'B' ,'C' ... ,'Z')，此时这里的单引号就不应被替换。
  */
 public class DBSQL implements Serializable
 {
@@ -157,7 +159,7 @@ public class DBSQL implements Serializable
     /** SQL语句操作的表名称。用于Insert、Update语句 */
     private String                    sqlTableName;
     
-    /** 替换数据库关键字。如，单引号替换成两个单引号。默认为：true，即不替换 */
+    /** 替换数据库关键字。如，单引号替换成两个单引号。默认为：true，即替换 */
     private boolean                   keyReplace;
     
     /** 当this.keyReplace=true时有效。表示个别不替换数据库关键字的占位符。前缀无须冒号 */
@@ -1256,7 +1258,7 @@ public class DBSQL implements Serializable
     
 
     /**
-     * 获取：替换数据库关键字。如，单引号替换成两个单引号。默认为：true，即不替换
+     * 获取：替换数据库关键字。如，单引号替换成两个单引号。默认为：true，即替换
      */
     public boolean isKeyReplace()
     {
@@ -1266,7 +1268,7 @@ public class DBSQL implements Serializable
 
     
     /**
-     * 设置：替换数据库关键字。如，单引号替换成两个单引号。默认为：true，即不替换
+     * 设置：替换数据库关键字。如，单引号替换成两个单引号。默认为：true，即替换
      * 
      * 采用类似工厂方法构造 DBSQLFill，惟一的目的就是为了生成SQL时，减少IF判断，提高速度。
      * 
@@ -1600,7 +1602,7 @@ interface DBSQLFill
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
-     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
     public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType);
@@ -1619,7 +1621,7 @@ interface DBSQLFill
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
-     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
     public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType);
@@ -1638,7 +1640,7 @@ interface DBSQLFill
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
-     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
     public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType);
@@ -1707,7 +1709,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
-     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
     public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
@@ -1729,7 +1731,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
-     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
     public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
@@ -1751,7 +1753,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
-     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
     public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
@@ -1770,7 +1772,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      *
      * @param i_Info
      * @param i_PlaceHolder
-     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
     public String fillSpace(String i_Info ,String i_PlaceHolder)
@@ -1793,6 +1795,10 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
  * @author      ZhengWei(HY)
  * @createDate  2016-08-09
  * @version     v1.0
+ *              v2.0  2019-05-08  添加：对MySQL数据库添加\号的转义。\号本身就是MySQL数据库的转义符。
+ *                                      但写入文本信息时，\号多数时是想被直接当普通符号写入到数据库中。
+ *              v3.0  2019-08-23  添加：是否允许替换字符串。防止如：'A' ,'B' ,'C' ... ,'Z'  这样格式的字符串被替换
+ *                                      一般用于由外界动态生成的在 IN 语法中，如 IN ('A' ,'B' ,'C' ... ,'Z')，此时这里的单引号就不应被替换。
  */
 class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
 {
@@ -1852,14 +1858,14 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
-     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
     public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         try
         {
-            if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
+            if ( (this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder)) && this.isAllowReplace(i_Value) )
             {
                 if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
                 {
@@ -1877,7 +1883,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         }
         catch (Exception exce)
         {
-            if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
+            if ( (this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder)) && this.isAllowReplace(i_Value) )
             {
                 if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
                 {
@@ -1909,14 +1915,14 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
-     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
     public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         try
         {
-            if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
+            if ( (this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder)) && this.isAllowReplace(i_Value) )
             {
                 if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
                 {
@@ -1934,7 +1940,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         }
         catch (Exception exce)
         {
-            if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
+            if ( (this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder)) && this.isAllowReplace(i_Value) )
             {
                 if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
                 {
@@ -1966,7 +1972,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_Info
      * @param i_PlaceHolder
      * @param i_Value
-     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缘的常量
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
     public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
@@ -1975,7 +1981,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         
         try
         {
-            if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
+            if ( (this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder)) && this.isAllowReplace(i_Value) )
             {
                 if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
                 {
@@ -1993,7 +1999,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         }
         catch (Exception exce)
         {
-            if ( this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder) )
+            if ( (this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder)) && this.isAllowReplace(i_Value) )
             {
                 if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
                 {
@@ -2027,6 +2033,38 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
     public String fillSpace(String i_Info ,String i_PlaceHolder)
     {
         return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,"");
+    }
+    
+    
+    
+    /**
+     * 是否允许替换字符串。防止如：'A' ,'B' ,'C' ... ,'Z'  这样格式的字符串被替换
+     * 
+     * 一般用于由外界动态生成的在 IN 语法中，如 IN ('A' ,'B' ,'C' ... ,'Z')，此时这里的单引号就不应被替换。
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2019-08-23
+     * @version     v1.0
+     *
+     * @param i_Value
+     * @return
+     */
+    private boolean isAllowReplace(String i_Value)
+    {
+        int v_ACount = StringHelp.getCount(i_Value ,"'");
+        
+        // 当单引号成对出现时
+        if ( v_ACount % 2 == 0 && i_Value.startsWith("'") && i_Value.endsWith("'") )
+        {
+            int v_BCount = StringHelp.getCount(i_Value ,",");
+            if ( v_ACount / 2 == v_BCount + 1 )
+            {
+                // 当单引号成对的个数 = 分号的个数时，不允许作替换动作
+                return false;
+            }
+        }
+        
+        return true;
     }
     
 }
