@@ -31,9 +31,9 @@ public final class DBSQLSafe
     
     private static final String []   $Relation     = {" AND " ," OR "};
     
-    private static final String []   $Compares     = {"="  ,"<" ,"<=" ,">=" ,">"};
+    private static final String []   $Compares     = {"!=" ,"<=" ,"<" ,">=" ,">" ,"="};
     
-    private static final String []   $Compares_Fel = {"==" ,"<" ,"<=" ,">=" ,">"};
+    private static final String []   $Compares_Fel = {"!=" ,"<=" ,"<" ,">=" ,">" ,"=="};
     
     private static final String [][] $SQLKeys      = {{" UNION "   ,"SELECT " ," FROM "} 
                                                      ,{"EXEC "} 
@@ -129,19 +129,24 @@ public final class DBSQLSafe
         for (int i=0; i<$Compares.length; i++)
         {
             String [] v_CompareValues = v_SubValue.split($Compares[i]);
-            if ( v_CompareValues.length < 2 )
+            if ( v_CompareValues.length < 2)
             {
                 continue;
             }
+            if ( i == 0 )
+            {
+                // 不判定 != 的关系
+                break;
+            }
             
-            String [] v_CVLefts  = v_CompareValues[0].trim().split(" ");
-            String    v_CVLeft   = v_CVLefts[v_CVLefts.length - 1];
-            String [] v_CVRights = v_CompareValues[1].trim().split(" ");
-            String    v_CVRight  = v_CVRights[0];
+//            String [] v_CVLefts  = v_CompareValues[0].trim().split(" ");
+//            String    v_CVLeft   = v_CVLefts[v_CVLefts.length - 1];
+//            String [] v_CVRights = v_CompareValues[1].trim().split(" ");
+//            String    v_CVRight  = v_CVRights[0];
             
             try
             {
-                Object v_FelRet = $Fel.eval(v_CVLeft + " " + $Compares_Fel[i] + " " + v_CVRight);
+                Object v_FelRet = $Fel.eval(v_CompareValues[0] + " " + $Compares_Fel[i] + " " + v_CompareValues[1]);
                 if ( (Boolean)v_FelRet )
                 {
                     return false;
@@ -149,7 +154,7 @@ public final class DBSQLSafe
             }
             catch (Exception exce)
             {
-                exce.printStackTrace();
+                // 不输出异常信息
                 return true;
             }
         }

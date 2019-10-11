@@ -52,7 +52,7 @@ public class JU_DBSQL_Condition
         Map<String ,Object> v_Params = new HashMap<String ,Object>();
         v_Params.put("nAmE"       ,"ZhengWei");
         v_Params.put("AgE"        ,21);
-        v_Params.put("SchoolCity" ,"Xi'An");
+        v_Params.put("SchoolCity" ,"Xi''An");
         v_Params.put("WORKCITY"   ,"XianYang");
         
         DBSQL v_DBSQL = createDBSQL();
@@ -85,7 +85,7 @@ public class JU_DBSQL_Condition
         Map<String ,Object> v_Params = new HashMap<String ,Object>();
         v_Params.put("nAmE"       ,"ZhengWei");
         v_Params.put("AgE"        ,17);
-        v_Params.put("SchoolCity" ,"Xi'An");
+        v_Params.put("SchoolCity" ,"Xi''An");
         v_Params.put("WORKCITY"   ,"XianYang");
         
         DBSQL v_DBSQL = createDBSQL();

@@ -575,6 +575,7 @@ public class DBSQL implements Serializable
                     
                     Object       v_GetterValue    = null;
                     DBConditions v_ConditionGroup = null;
+                    boolean      v_IsCValue       = false;
                     try
                     {
                         if ( v_MethodReflect != null )
@@ -584,6 +585,7 @@ public class DBSQL implements Serializable
                             {
                                 // 占位符取值条件  ZhengWei(HY) Add 2018-08-10
                                 v_GetterValue = v_ConditionGroup.getValue(i_Obj ,false);
+                                v_IsCValue    = true;
                             }
                             else
                             {
@@ -621,7 +623,14 @@ public class DBSQL implements Serializable
                                     {
                                         if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MRValue.toString()) )
                                         {
-                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString() ,v_DBType);
+                                            if ( v_IsCValue )
+                                            {
+                                                v_Info = this.dbSQLFill.onlyFillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString() ,v_DBType);
+                                            }
+                                            else
+                                            {
+                                                v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_MRValue.toString() ,v_DBType);
+                                            }
                                             v_IsReplace = true;
                                         }
                                         else
@@ -649,7 +658,14 @@ public class DBSQL implements Serializable
                             {
                                 if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
                                 {
-                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString() ,v_DBType);
+                                    if ( v_IsCValue )
+                                    {
+                                        v_Info = this.dbSQLFill.onlyFillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString() ,v_DBType);
+                                    }
+                                    else
+                                    {
+                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_GetterValue.toString() ,v_DBType);
+                                    }
                                     v_ReplaceCount++;
                                 }
                                 else
@@ -823,10 +839,12 @@ public class DBSQL implements Serializable
                     {
                         Object       v_MapValue       = null;
                         DBConditions v_ConditionGroup = Help.getValueIgnoreCase(this.conditions ,v_PlaceHolder);
+                        boolean      v_IsCValue       = false;
                         if ( v_ConditionGroup != null )
                         {
                             // 占位符取值条件  ZhengWei(HY) Add 2018-08-10
                             v_MapValue = v_ConditionGroup.getValue(i_Values ,false);
+                            v_IsCValue = true;
                         }
                         else
                         {
@@ -855,7 +873,14 @@ public class DBSQL implements Serializable
                                     {
                                         if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_GetterValue.toString()) )
                                         {
-                                            v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString() ,v_DBType);
+                                            if ( v_IsCValue )
+                                            {
+                                                v_Info = this.dbSQLFill.onlyFillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString() ,v_DBType);
+                                            }
+                                            else
+                                            {
+                                                v_Info = this.dbSQLFill.fillFirst(v_Info ,v_PlaceHolder ,v_GetterValue.toString() ,v_DBType);
+                                            }
                                             v_IsReplace = true;
                                         }
                                         else
@@ -908,7 +933,14 @@ public class DBSQL implements Serializable
                             {
                                 if ( !this.isSafeCheck() || DBSQLSafe.isSafe(v_MapValue.toString()) )
                                 {
-                                    v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString() ,v_DBType);
+                                    if ( v_IsCValue )
+                                    {
+                                        v_Info = this.dbSQLFill.onlyFillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString() ,v_DBType);
+                                    }
+                                    else
+                                    {
+                                        v_Info = this.dbSQLFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString() ,v_DBType);
+                                    }
                                     v_ReplaceCount++;
                                 }
                                 else
@@ -1648,6 +1680,67 @@ interface DBSQLFill
     
     
     /**
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换首个占位符
+     * 
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2019-10-11
+     * @version     v1.0
+     *
+     * @param i_Info
+     * @param i_PlaceHolder
+     * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
+     * @return
+     */
+    public String onlyFillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType);
+    
+    
+    
+    /**
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符。
+     * 
+     * 替换公式：i_Info.replaceAll(":" + i_PlaceHolder , i_Value);
+     * 
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2019-10-11
+     * @version     v1.0
+     *
+     * @param i_Info
+     * @param i_PlaceHolder
+     * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
+     * @return
+     */
+    public String onlyFillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType);
+    
+    
+    
+    /**
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符（前后带单引号的替换）
+     * 
+     * 替换公式：i_Info.replaceAll("':" + i_PlaceHolder + "'", i_Value.replaceAll("'" ,"''"));
+     * 
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2019-10-11
+     * @version     v1.0
+     *
+     * @param i_Info
+     * @param i_PlaceHolder
+     * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
+     * @return
+     */
+    public String onlyFillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType);
+    
+    
+    
+    /**
      * 将占位符替换成空字符串
      * 
      * @author      ZhengWei(HY)
@@ -1714,7 +1807,36 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      */
     public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
-        return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,i_Value);
+        try
+        {
+            return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,i_Value);
+        }
+        catch (Exception exce)
+        {
+            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+        }
+    }
+    
+    
+    
+    /**
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换首个占位符
+     * 
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2019-10-11
+     * @version     v1.0
+     *
+     * @param i_Info
+     * @param i_PlaceHolder
+     * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
+     * @return
+     */
+    public String onlyFillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
+    {
+        return fillFirst(i_Info ,i_PlaceHolder ,i_Value ,i_DBType);
     }
     
     
@@ -1736,7 +1858,38 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      */
     public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
-        return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,i_Value);
+        try
+        {
+            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,i_Value);
+        }
+        catch (Exception exce)
+        {
+            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+        }
+    }
+    
+    
+    
+    /**
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符。
+     * 
+     * 替换公式：i_Info.replaceAll(":" + i_PlaceHolder , i_Value);
+     * 
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2019-10-11
+     * @version     v1.0
+     *
+     * @param i_Info
+     * @param i_PlaceHolder
+     * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
+     * @return
+     */
+    public String onlyFillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
+    {
+        return fillAll(i_Info ,i_PlaceHolder ,i_Value ,i_DBType);
     }
     
     
@@ -1758,7 +1911,38 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      */
     public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
-        return StringHelp.replaceAll(i_Info ,"':" + i_PlaceHolder + "'" ,i_Value);
+        try
+        {
+            return StringHelp.replaceAll(i_Info ,"':" + i_PlaceHolder + "'" ,i_Value);
+        }
+        catch (Exception exce)
+        {
+            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+        }
+    }
+    
+    
+    
+    /**
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符（前后带单引号的替换）
+     * 
+     * 替换公式：i_Info.replaceAll("':" + i_PlaceHolder + "'", i_Value.replaceAll("'" ,"''"));
+     * 
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2019-10-11
+     * @version     v1.0
+     *
+     * @param i_Info
+     * @param i_PlaceHolder
+     * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
+     * @return
+     */
+    public String onlyFillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
+    {
+        return fillAllMark(i_Info ,i_PlaceHolder ,i_Value ,i_DBType);
     }
     
     
@@ -1779,6 +1963,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
     {
         return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,"");
     }
+    
 }
 
 
@@ -1904,6 +2089,35 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
     
     
     /**
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换首个占位符
+     * 
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2019-10-11
+     * @version     v1.0
+     *
+     * @param i_Info
+     * @param i_PlaceHolder
+     * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
+     * @return
+     */
+    public String onlyFillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
+    {
+        try
+        {
+            return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,i_Value);
+        }
+        catch (Exception exce)
+        {
+            return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+        }
+    }
+    
+    
+    
+    /**
      * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符
      * 
      * 替换公式：i_Info.replaceAll(":" + i_PlaceHolder , i_Value.replaceAll("'" ,"''"));
@@ -1955,6 +2169,37 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
             {
                 return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
             }
+        }
+    }
+    
+    
+    
+    /**
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符。
+     * 
+     * 替换公式：i_Info.replaceAll(":" + i_PlaceHolder , i_Value);
+     * 
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2019-10-11
+     * @version     v1.0
+     *
+     * @param i_Info
+     * @param i_PlaceHolder
+     * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
+     * @return
+     */
+    public String onlyFillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
+    {
+        try
+        {
+            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,i_Value);
+        }
+        catch (Exception exce)
+        {
+            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
         }
     }
     
@@ -2014,6 +2259,39 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
             {
                 return StringHelp.replaceAll(i_Info ,v_PH ,Matcher.quoteReplacement(i_Value));
             }
+        }
+    }
+    
+    
+    
+    /**
+     * 将数值(i_Value)中的单引号替换成两个单引号后，再替换所有相同的占位符（前后带单引号的替换）
+     * 
+     * 替换公式：i_Info.replaceAll("':" + i_PlaceHolder + "'", i_Value.replaceAll("'" ,"''"));
+     * 
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2019-10-11
+     * @version     v1.0
+     *
+     * @param i_Info
+     * @param i_PlaceHolder
+     * @param i_Value
+     * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
+     * @return
+     */
+    public String onlyFillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
+    {
+        String v_PH = "':" + i_PlaceHolder + "'";
+        
+        try
+        {
+            return StringHelp.replaceAll(i_Info ,v_PH ,i_Value);
+        }
+        catch (Exception exce)
+        {
+            return StringHelp.replaceAll(i_Info ,v_PH ,Matcher.quoteReplacement(i_Value));
         }
     }
     
