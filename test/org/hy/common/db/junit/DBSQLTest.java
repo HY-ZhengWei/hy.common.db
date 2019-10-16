@@ -27,6 +27,10 @@ public class DBSQLTest
 	
 	private String         userName;
 	
+	private String         datas;
+	
+	private String         lists;
+	
 	
 	
 	public Date getBeginTime() 
@@ -77,8 +81,32 @@ public class DBSQLTest
 	}
 	
 	
-	
-	public static void main(String [] args)
+    public String getDatas()
+    {
+        return datas;
+    }
+
+
+    public void setDatas(String datas)
+    {
+        this.datas = datas;
+    }
+    
+    
+    public String getLists()
+    {
+        return lists;
+    }
+
+    
+    public void setLists(String lists)
+    {
+        this.lists = lists;
+    }
+    
+
+
+    public static void main(String [] args)
 	{
 		// 按属性类生成可执行SQL
 	    StringBuilder v_SQL = new StringBuilder();
@@ -91,6 +119,8 @@ public class DBSQLTest
 		v_SQL.append("   AND  UserName  = ':UserName'");
 		v_SQL.append("   AND  CardNo    = ':CardNo'");
 		v_SQL.append("   AND  CityCode  = 0910");
+		v_SQL.append("   AND  CityCode IN (:datas)");
+		v_SQL.append("   AND  CityCode in (:lists)");
 		
 		DBSQL        v_DBSQL = new DBSQL(v_SQL.toString());
 		DBSQLTest    v_Test  = new DBSQLTest();
@@ -99,6 +129,8 @@ public class DBSQLTest
 		v_Test.setEndTime(  new Date());
 		v_Test.setStatue(   2012);
 		v_Test.setUserName("HY");
+		v_Test.setDatas("'A' ,'B' ,'C' ,'Z'");
+		v_Test.setLists("A' ,'B' ,'C' ,'Z");
 		
 		System.out.println(v_DBSQL.getSQL(v_Test ,null));
 		System.out.println(v_DBSQL.getSQLType());

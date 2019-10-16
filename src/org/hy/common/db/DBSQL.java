@@ -2332,13 +2332,28 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         int v_ACount = StringHelp.getCount(i_Value ,"'");
         
         // 当单引号成对出现时
-        if ( v_ACount % 2 == 0 && i_Value.startsWith("'") && i_Value.endsWith("'") )
+        if ( v_ACount % 2 == 0 )
         {
-            int v_BCount = StringHelp.getCount(i_Value ,",");
-            if ( v_ACount / 2 == v_BCount + 1 )
+            boolean v_StartW = i_Value.trim().startsWith("'");
+            boolean v_EndW   = i_Value.trim().endsWith("'");
+            
+            if ( v_StartW && v_EndW )
             {
-                // 当单引号成对的个数 = 分号的个数时，不允许作替换动作
-                return false;
+                int v_BCount = StringHelp.getCount(i_Value ,",");
+                if ( v_ACount / 2 == v_BCount + 1 )
+                {
+                    // 当单引号成对的个数 = 分号的个数时，不允许作替换动作
+                    return false;
+                }
+            }
+            else if ( !v_StartW && !v_EndW )
+            {
+                int v_BCount = StringHelp.getCount(i_Value ,",");
+                if ( v_ACount / 2 == v_BCount )
+                {
+                    // 当单引号成对的个数 = 分号的个数时，不允许作替换动作
+                    return false;
+                }
             }
         }
         
