@@ -4,7 +4,7 @@
 
   <groupId>org</groupId>
   <artifactId>hy.common.db</artifactId>
-  <version>2.5.2</version>
+  <version>2.5.3</version>
   <packaging>jar</packaging>
 
   <name>hy.common.db</name>
@@ -35,7 +35,7 @@
 	<dependency>
 	    <groupId>org</groupId>
 	    <artifactId>hy.common.base</artifactId>
-	    <version>1.0.149</version>
+	    <version>1.0.153</version>
 	</dependency>
 	
 	<dependency>

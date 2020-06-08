@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.hy.common.Help;
 import org.hy.common.MethodReflect;
+import org.hy.common.PartitionMap;
 import org.hy.common.StringHelp;
 
 import com.greenpineyu.fel.FelEngine;
@@ -68,7 +69,7 @@ public class DBCondition implements Serializable
     
     
     /** 占位符的名称。不包括：冒号。不区分大小写 */
-    private String name;
+    private String                        name;
     
     /** 
      * Fel条件表达式
@@ -77,7 +78,7 @@ public class DBCondition implements Serializable
      *    如：:c01=='1' && :c02=='2' 
      *    如：:c01==NULL || :c01==''  判定是否为NULL对象或空字符串
      */
-    private String condition;
+    private String                        condition;
     
     /** 
      * 解释出来的Fel条件。与this.condition的区别是：它是没有占位符
@@ -85,21 +86,21 @@ public class DBCondition implements Serializable
      *    如：c01=='1' && c02=='2' 
      *    如：c01==NULL || c01==''  判定是否为NULL对象或空字符串
      */
-    private String              conditionFel;
+    private String                        conditionFel;
     
     /**
      * 占位符信息的集合
      * 
      * Map.key    为占位符。前缀为:符号
-     * Map.Value  为占位符原文本信息
+     * Map.Value  为占位符的顺序。下标从0开始
      */
-    private Map<String ,Object> placeholders;
+    private PartitionMap<String ,Integer> placeholders;
     
     /** 条件满足时的真值。也可以是另一个占位符，但必须以冒号开头。不区分大小写 */
-    private String              trueValue;
+    private String                        trueValue;
     
     /** 条件不满足时的假值。也可以是另一个占位符，但必须以冒号开头。不区分大小写 */
-    private String              falseValue;
+    private String                        falseValue;
     
     
     

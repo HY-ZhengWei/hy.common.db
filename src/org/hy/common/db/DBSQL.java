@@ -16,6 +16,7 @@ import org.hy.common.SplitSegment;
 import org.hy.common.SplitSegment.InfoType;
 import org.hy.common.StringHelp;
 import org.hy.common.MethodReflect;
+import org.hy.common.PartitionMap;
 
 
 
@@ -98,6 +99,7 @@ import org.hy.common.MethodReflect;
  *              v15.0 2019-07-05  1. 修改：keyReplace的默认值改为true。默认替换特殊字符
  *              v15.1 2019-08-23  1. 添加：是否允许替换字符串。防止如：'A' ,'B' ,'C' ... ,'Z'  这样格式的字符串被替换。
  *                                         一般用于由外界动态生成的在 IN 语法中，如 IN ('A' ,'B' ,'C' ... ,'Z')，此时这里的单引号就不应被替换。
+ *              v16.0 2020-06-08  1. 添加：预解析的点位符，再也不能刻意注意点位符的顺序了。可以像常规SQL的占位符一样，任意摆放了。
  */
 public class DBSQL implements Serializable
 {
@@ -531,8 +533,8 @@ public class DBSQL implements Serializable
         
         while ( v_Ierator.hasNext() )
         {
-            DBSQL_Split         v_DBSQL_Segment = v_Ierator.next();
-            Map<String ,Object> v_Placeholders  = v_DBSQL_Segment.getPlaceholders();
+            DBSQL_Split                   v_DBSQL_Segment = v_Ierator.next();
+            PartitionMap<String ,Integer> v_Placeholders  = v_DBSQL_Segment.getPlaceholders();
             
             if ( Help.isNull(v_Placeholders) )
             {
@@ -811,8 +813,8 @@ public class DBSQL implements Serializable
         // 不再区分 $DBSQL_TYPE_INSERT 类型，使所有的SQL类型均采有相同的占位符填充逻辑。ZhengWei(HY) Edit 2018-06-06
         while ( v_Ierator.hasNext() )
         {
-            DBSQL_Split         v_DBSQL_Segment = v_Ierator.next();
-            Map<String ,Object> v_Placeholders  = v_DBSQL_Segment.getPlaceholders();
+            DBSQL_Split                   v_DBSQL_Segment = v_Ierator.next();
+            PartitionMap<String ,Integer> v_Placeholders  = v_DBSQL_Segment.getPlaceholders();
             
             if ( Help.isNull(v_Placeholders) )
             {
@@ -1060,8 +1062,8 @@ public class DBSQL implements Serializable
 
         while ( v_Ierator.hasNext() )
         {
-            DBSQL_Split         v_DBSQL_Segment = v_Ierator.next();
-            Map<String ,Object> v_Placeholders  = v_DBSQL_Segment.getPlaceholdersSequence();
+            DBSQL_Split                   v_DBSQL_Segment = v_Ierator.next();
+            PartitionMap<String ,Integer> v_Placeholders  = v_DBSQL_Segment.getPlaceholders();
             
             if ( Help.isNull(v_Placeholders) )
             {
@@ -1069,18 +1071,22 @@ public class DBSQL implements Serializable
             }
             else
             {
-                Iterator<String> v_IterPlaceholders = v_Placeholders.keySet().iterator();
-                String           v_Info             = v_DBSQL_Segment.getInfo();
-                int              v_ReplaceCount     = 0;
+                String v_Info         = v_DBSQL_Segment.getInfo();
+                int    v_ReplaceCount = 0;
+                int    v_PSize        = v_Placeholders.rowCount();
                 
-                while ( v_IterPlaceholders.hasNext() )
+                // 先初始化集合中的所有元素
+                for (int i=1; i<=v_PSize; i++)
                 {
-                    String v_PlaceHolder = v_IterPlaceholders.next();
-                    
-                    while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
+                    v_Ret.getPlaceholders().add("");
+                }
+                
+                for (Map.Entry<String ,List<Integer>> v_PlaceholderIndexes : v_Placeholders.entrySet() )
+                {
+                    for (Integer v_PIndex : v_PlaceholderIndexes.getValue())
                     {
-                        v_Info = StringHelp.replaceFirst(v_Info ,":" + v_PlaceHolder ,"?");
-                        v_Ret.getPlaceholders().add(v_PlaceHolder);
+                        v_Info = StringHelp.replaceFirst(v_Info ,":" + v_PlaceholderIndexes.getKey() ,"?");
+                        v_Ret.getPlaceholders().set(v_PIndex ,v_PlaceholderIndexes.getKey());
                     }
                 }
                 
@@ -1138,8 +1144,8 @@ public class DBSQL implements Serializable
         // 不再区分 $DBSQL_TYPE_INSERT 类型，使所有的SQL类型均采有相同的占位符填充逻辑。ZhengWei(HY) Edit 2018-06-06
         while ( v_Ierator.hasNext() )
         {
-            DBSQL_Split         v_DBSQL_Segment = v_Ierator.next();
-            Map<String ,Object> v_Placeholders  = v_DBSQL_Segment.getPlaceholders();
+            DBSQL_Split                   v_DBSQL_Segment = v_Ierator.next();
+            PartitionMap<String ,Integer> v_Placeholders  = v_DBSQL_Segment.getPlaceholders();
             
             if ( Help.isNull(v_Placeholders) )
             {
