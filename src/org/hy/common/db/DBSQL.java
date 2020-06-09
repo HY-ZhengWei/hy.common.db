@@ -99,7 +99,8 @@ import org.hy.common.PartitionMap;
  *              v15.0 2019-07-05  1. 修改：keyReplace的默认值改为true。默认替换特殊字符
  *              v15.1 2019-08-23  1. 添加：是否允许替换字符串。防止如：'A' ,'B' ,'C' ... ,'Z'  这样格式的字符串被替换。
  *                                         一般用于由外界动态生成的在 IN 语法中，如 IN ('A' ,'B' ,'C' ... ,'Z')，此时这里的单引号就不应被替换。
- *              v16.0 2020-06-08  1. 添加：预解析的点位符，再也不能刻意注意点位符的顺序了。可以像常规SQL的占位符一样，任意摆放了。
+ *              v16.0 2020-06-08  1. 添加：预解析的占位符，再也不能刻意注意点位符的顺序了。可以像常规SQL的占位符一样，任意摆放了。
+ *                                2. 优化：预解析的占位符，不再要求去掉左右两边的单引号了。即与常规SQL的占位符一样。
  */
 public class DBSQL implements Serializable
 {
@@ -1085,7 +1086,18 @@ public class DBSQL implements Serializable
                 {
                     for (Integer v_PIndex : v_PlaceholderIndexes.getValue())
                     {
-                        v_Info = StringHelp.replaceFirst(v_Info ,":" + v_PlaceholderIndexes.getKey() ,"?");
+                        String v_PKey      = ":" + v_PlaceholderIndexes.getKey();
+                        String v_PKey2     = "'" + v_PKey + "'";
+                        int    v_PKeyFind  = v_Info.indexOf(v_PKey);
+                        int    v_PKeyFind2 = v_Info.indexOf(v_PKey2);
+                        
+                        // 支持 ':占位符'  形式的预解释
+                        if ( v_PKeyFind2 >= 0 && v_PKeyFind2 + 1 == v_PKeyFind )
+                        {
+                            v_PKey = v_PKey2;
+                        }
+                        
+                        v_Info = StringHelp.replaceFirst(v_Info ,v_PKey ,"?");
                         v_Ret.getPlaceholders().set(v_PIndex ,v_PlaceholderIndexes.getKey());
                     }
                 }
