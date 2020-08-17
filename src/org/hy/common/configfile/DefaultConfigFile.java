@@ -48,7 +48,7 @@ public class DefaultConfigFile extends ConfigFileReadBase
 			if ( v_LineStrArr.length != 2 )
 			{
 				this.setStopRead(true);
-				throw new ExceptionInInitializerError(ConfigFile_I18N.getHintRigthConfig() + i_LineNo + " = " + i_LineString);
+				throw new RuntimeException(ConfigFile_I18N.getHintRigthConfig() + i_LineNo + " = " + i_LineString);
 			}
 			
 			
@@ -59,7 +59,7 @@ public class DefaultConfigFile extends ConfigFileReadBase
 			catch (Exception exce)
 			{
 				this.setStopRead(true);
-				throw new ExceptionInInitializerError(ConfigFile_I18N.getHintRigthConfig() + i_LineNo + " = " + i_LineString);
+				throw new RuntimeException(ConfigFile_I18N.getHintRigthConfig() + i_LineNo + " = " + i_LineString);
 			}
 		}
 		

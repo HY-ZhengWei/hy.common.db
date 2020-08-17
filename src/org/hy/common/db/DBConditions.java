@@ -23,7 +23,7 @@ import org.hy.common.StringHelp;
  * DBCondition只能实现Java编程语言中的 if ... else ... 的条件判定。
  * 
  * XML配置举例：
- * <ConditionGroup>
+ * <condition>
  *     <name>占位符名称。不含前缀的冒号</name>
  *     <if>条件1</if>
  *     <true>条件1满足时执行的真值</true>
@@ -31,7 +31,7 @@ import org.hy.common.StringHelp;
  *     <true>条件2满足时执行的真值</true>
  *     ... ...
  *     <false>所有条件均不满足时的假值</false>
- * </ConditionGroup>
+ * </condition>
  * 
  * <if></if><true></true> 可以有无数个，即不限制出现的个数。
  * <false></false>        相当于Java语言中的 else 语法，所以只在最后出现一次即可。
