@@ -95,6 +95,9 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     /** 连接使用峰值（不包括连接池中预先初始化的连接数量） */
     private long               connMaxUseCount;
     
+    /** 注释。可用于日志的输出等帮助性的信息 */
+    private String             comment;
+    
 	
 	
 	public DataSourceGroup()
@@ -557,6 +560,30 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     public int hashCode()
     {
         return this.getObjectID().hashCode();
+    }
+    
+    
+    
+    /**
+     * 注释。可用于日志的输出等帮助性的信息
+     * 
+     * @param i_Comment
+     */
+    public void setComment(String i_Comment)
+    {
+        this.comment = i_Comment;
+    }
+    
+    
+    
+    /**
+     * 注释。可用于日志的输出等帮助性的信息
+     *
+     * @return
+     */
+    public String getComment()
+    {
+        return this.comment;
     }
     
     
