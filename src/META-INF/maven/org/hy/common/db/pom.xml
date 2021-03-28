@@ -8,7 +8,7 @@
   <packaging>jar</packaging>
 
   <name>hy.common.db</name>
-  <url>https://github.com/HY-ZhengWei/hy.common.db</url>
+  <url>https://github.com/HY-ZhengWei/hy.common.db</url>   <!-- https://gitee.com/HY-ZhengWei/hy.common.db -->
   
   <developers>
     <developer>
@@ -32,6 +32,7 @@
     </dependency>
     
     <!-- https://github.com/HY-ZhengWei/hy.common.base -->
+    <!-- https://gitee.com/HY-ZhengWei/hy.common.base -->
     <dependency>
         <groupId>org</groupId>
         <artifactId>hy.common.base</artifactId>
