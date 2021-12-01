@@ -2,5 +2,5 @@ Manifest-Version: 2.5.4
 Created-By: HY.ZhengWei@qq.com  2009
 Specification-Version: 2.5.4  2021-03-28
 SourceCode: https://github.com/HY-ZhengWei/hy.common.db
-SourceCode: https://gitee.com/HY-ZhengWei/hy.common.db
+SourceCodeChina: https://gitee.com/HY-ZhengWei/hy.common.db
 Build-JDK: 1.8

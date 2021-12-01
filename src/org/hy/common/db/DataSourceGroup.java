@@ -23,7 +23,7 @@ import org.hy.common.XJavaID;
  * 
  * @author      ZhengWei(HY)
  * @createDate  2012-11-25
- * @version     v1.0  
+ * @version     v1.0
  *              v2.0   2016-01-22  实现 Comparable 接口
  *              v3.0   2016-02-22  添加：数据库产品名称、版本信息
  *                                 添加：数据库产品类型。目前可识别Oracle、MySQL、SQL Server、DB2、SQLite常用的数据库。
@@ -53,16 +53,16 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     
     
     
-	private List<DataSource>   dataSources;
-	
-	/**
-	 * 当前有效的数据源连接池的索引号。
-	 * 初始值为 - 1，表示没有任何可用的数据库连接池。
-	 * 有效最小下标从 0 开始。 
-	 */
-	private int                validDSIndex;
-	
-	/** 唯一标示，主用于对比等操作 */
+    private List<DataSource>   dataSources;
+    
+    /**
+     * 当前有效的数据源连接池的索引号。
+     * 初始值为 - 1，表示没有任何可用的数据库连接池。
+     * 有效最小下标从 0 开始。
+     */
+    private int                validDSIndex;
+    
+    /** 唯一标示，主用于对比等操作 */
     private String             uuid;
     
     /** XJava池中对象的ID标识 */
@@ -98,142 +98,142 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     /** 注释。可用于日志的输出等帮助性的信息 */
     private String             comment;
     
-	
-	
-	public DataSourceGroup()
-	{
-		this.dataSources     = new ArrayList<DataSource>();
-		this.validDSIndex    = -1;
-		this.uuid            = StringHelp.getUUID();
-		this.isRunReConn     = false;
-		this.isException     = false;
-		this.connLastTime    = null;
-		this.connActiveCount = 0;
-		this.connMaxUseCount = 0;
-	}
-	
-	
-	
-	/**
-	 * 向组中添加数据库连接池
-	 * 
-	 * @param i_DataSource
-	 */
-	public synchronized void add(DataSource i_DataSource)
-	{
-		if ( i_DataSource == null )
-		{
-			throw new NullPointerException("DataSource is null.");
-		}
-		
-		this.dataSources.add(i_DataSource);
-		
-		if ( this.validDSIndex < 0 )
-		{
-			this.validDSIndex = 0;
-		}
-	}
-	
-	
-	
-	/**
-	 * 获取数据库连接。
-	 * 
-	 * 1. 依次尝试组中每一个元素，直到获取到可用的数据库连接。
-	 *    并且，记忆有效的数据库连接池索引号。
-	 *    方便下次的使用。
-	 *    
-	 * 2. 如果遍历所有元素，均无法获取可用的数据库连接，则返回 null。
-	 *    并且，标记 this.validDSIndex 有效索引号为:Integer.MAX_VALUE。
-	 *    即，所有数据库连接池都不可用，下次获取连接时，不再一一尝试获取连接。
-	 * 
-	 * @return
-	 */
-	public synchronized java.sql.Connection getConnection()
-	{
-		int v_Size  = this.dataSources.size();
-		
-		if ( v_Size <= 0 )
-		{
-			return null;
-		}
-		
-		
-		for (; this.validDSIndex<v_Size; this.validDSIndex++)
-		{
-			try
-			{
-			    java.sql.Connection v_OutsideConn = this.dataSources.get(this.validDSIndex).getConnection();
-			    Connection          v_Conn        = new Connection(v_OutsideConn ,this);
-			    
-			    this.connActiveCount++;
-			    if ( this.connActiveCount > this.connMaxUseCount )
-			    {
-			        this.connMaxUseCount = this.connActiveCount;
-			    }
-			    this.isException  = false;
-			    this.connLastTime = new Date();
-			    
-			    return v_Conn;
-			}
-			catch (Exception exce)
-			{
-			    exce.printStackTrace();
-			    this.isException = true;
-			    System.err.println("\n" + Date.getNowTime().getFull() + " 编号：" + this.validDSIndex + " 的数据库连接池" + Help.NVL(this.getXJavaID()) + "失效。尝试获取下一个数据库连接池中的连接。");
-			}
-		}
-		
-		if ( !this.isRunReConn )
-		{ 
-		    System.err.println("\n" + Date.getNowTime().getFull() + " 所有的数据库连接池" + Help.NVL(this.getXJavaID()) + "失效，系统将等待 10秒后尝试重新连接。");
-		    
-		    this.isRunReConn  = true;  // 防止重复执行
-		    this.validDSIndex = Integer.MAX_VALUE;
-		    new Execute(this ,"allowReconnection").startDelayed(10 * 1000);
-		}
-		return null;
-	}
-	
-	
-	
-	/**
-	 * 允许重新尝试获取连接
-	 * 
-	 * 主备数据库都出现异常时，暂停一小段时间(10秒)后，才允许尝试重新获取数据库连接。
-	 * 
-	 * 在暂停的一小段时间内，外界调用 getConnection() 方法都返回 null。
-	 * 
-	 * @author      ZhengWei(HY)
-	 * @createDate  2016-03-02
-	 * @version     v1.0
-	 */
-	public synchronized void allowReconnection()
-	{
-	    System.out.println("\n" + Date.getNowTime().getFull() + " 数据库连接池组" + Help.NVL(this.getXJavaID()) + "编号从0重新遍历，尝试重新连接。");
-	    
-	    this.validDSIndex = 0;
-	    this.isRunReConn  = false;
-	}
-	
-	
-	
-	/**
-	 * 获取数据库产品信息
-	 * 
-	 * @author      ZhengWei(HY)
-	 * @createDate  2016-02-22
-	 * @version     v1.0
-	 *
-	 */
-	private synchronized void getDBProductInfo()
-	{
-	    if ( null != this.dbProductType )
-	    {
-	        return;
-	    }
-	    
-	    java.sql.Connection v_Conn = null;
+    
+    
+    public DataSourceGroup()
+    {
+        this.dataSources     = new ArrayList<DataSource>();
+        this.validDSIndex    = -1;
+        this.uuid            = StringHelp.getUUID();
+        this.isRunReConn     = false;
+        this.isException     = false;
+        this.connLastTime    = null;
+        this.connActiveCount = 0;
+        this.connMaxUseCount = 0;
+    }
+    
+    
+    
+    /**
+     * 向组中添加数据库连接池
+     * 
+     * @param i_DataSource
+     */
+    public synchronized void add(DataSource i_DataSource)
+    {
+        if ( i_DataSource == null )
+        {
+            throw new NullPointerException("DataSource is null.");
+        }
+        
+        this.dataSources.add(i_DataSource);
+        
+        if ( this.validDSIndex < 0 )
+        {
+            this.validDSIndex = 0;
+        }
+    }
+    
+    
+    
+    /**
+     * 获取数据库连接。
+     * 
+     * 1. 依次尝试组中每一个元素，直到获取到可用的数据库连接。
+     *    并且，记忆有效的数据库连接池索引号。
+     *    方便下次的使用。
+     * 
+     * 2. 如果遍历所有元素，均无法获取可用的数据库连接，则返回 null。
+     *    并且，标记 this.validDSIndex 有效索引号为:Integer.MAX_VALUE。
+     *    即，所有数据库连接池都不可用，下次获取连接时，不再一一尝试获取连接。
+     * 
+     * @return
+     */
+    public synchronized java.sql.Connection getConnection()
+    {
+        int v_Size  = this.dataSources.size();
+        
+        if ( v_Size <= 0 )
+        {
+            return null;
+        }
+        
+        
+        for (; this.validDSIndex<v_Size; this.validDSIndex++)
+        {
+            try
+            {
+                java.sql.Connection v_OutsideConn = this.dataSources.get(this.validDSIndex).getConnection();
+                Connection          v_Conn        = new Connection(v_OutsideConn ,this);
+                
+                this.connActiveCount++;
+                if ( this.connActiveCount > this.connMaxUseCount )
+                {
+                    this.connMaxUseCount = this.connActiveCount;
+                }
+                this.isException  = false;
+                this.connLastTime = new Date();
+                
+                return v_Conn;
+            }
+            catch (Exception exce)
+            {
+                exce.printStackTrace();
+                this.isException = true;
+                System.err.println("\n" + Date.getNowTime().getFull() + " 编号：" + this.validDSIndex + " 的数据库连接池" + Help.NVL(this.getXJavaID()) + "失效。尝试获取下一个数据库连接池中的连接。");
+            }
+        }
+        
+        if ( !this.isRunReConn )
+        {
+            System.err.println("\n" + Date.getNowTime().getFull() + " 所有的数据库连接池" + Help.NVL(this.getXJavaID()) + "失效，系统将等待 10秒后尝试重新连接。");
+            
+            this.isRunReConn  = true;  // 防止重复执行
+            this.validDSIndex = Integer.MAX_VALUE;
+            new Execute(this ,"allowReconnection").startDelayed(10 * 1000);
+        }
+        return null;
+    }
+    
+    
+    
+    /**
+     * 允许重新尝试获取连接
+     * 
+     * 主备数据库都出现异常时，暂停一小段时间(10秒)后，才允许尝试重新获取数据库连接。
+     * 
+     * 在暂停的一小段时间内，外界调用 getConnection() 方法都返回 null。
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2016-03-02
+     * @version     v1.0
+     */
+    public synchronized void allowReconnection()
+    {
+        System.out.println("\n" + Date.getNowTime().getFull() + " 数据库连接池组" + Help.NVL(this.getXJavaID()) + "编号从0重新遍历，尝试重新连接。");
+        
+        this.validDSIndex = 0;
+        this.isRunReConn  = false;
+    }
+    
+    
+    
+    /**
+     * 获取数据库产品信息
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2016-02-22
+     * @version     v1.0
+     *
+     */
+    private synchronized void getDBProductInfo()
+    {
+        if ( null != this.dbProductType )
+        {
+            return;
+        }
+        
+        java.sql.Connection v_Conn = null;
         try
         {
             v_Conn = this.getConnection();
@@ -243,7 +243,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
             }
             DatabaseMetaData v_DBMetaData = v_Conn.getMetaData();
             
-            this.dbProductName    = v_DBMetaData.getDatabaseProductName();  
+            this.dbProductName    = v_DBMetaData.getDatabaseProductName();
             this.dbProductVersion = v_DBMetaData.getDatabaseProductVersion();
             
             String v_DBName = this.dbProductName.toUpperCase();
@@ -280,7 +280,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
         {
             exce.printStackTrace();
         }
-        finally 
+        finally
         {
             try
             {
@@ -299,34 +299,34 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
                 v_Conn = null;
             }
         }
-	}
-	
-	
-	
-	/**
-	 * 数据库连接池组中，是否有可用的数据库池
-	 * 
-	 * @return
-	 */
-	public boolean isValid()
-	{
-		return this.validDSIndex >= 0 && this.validDSIndex < this.dataSources.size();
-	}
-	
-	
-	
-	/**
-	 * 获取组中池的数量
-	 * 
-	 * @return
-	 */
-	public int size()
-	{
-		return this.dataSources.size();
-	}
-	
-	
-	
+    }
+    
+    
+    
+    /**
+     * 数据库连接池组中，是否有可用的数据库池
+     * 
+     * @return
+     */
+    public boolean isValid()
+    {
+        return this.validDSIndex >= 0 && this.validDSIndex < this.dataSources.size();
+    }
+    
+    
+    
+    /**
+     * 获取组中池的数量
+     * 
+     * @return
+     */
+    public int size()
+    {
+        return this.dataSources.size();
+    }
+    
+    
+    
     /**
      * 获取：是否出现异常。非连接断连异常也会为true
      */
@@ -340,7 +340,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     /**
      * 设置：是否出现异常。非连接断连异常也会为true
      * 
-     * @param isException 
+     * @param isException
      */
     public void setException(boolean isException)
     {
@@ -363,8 +363,8 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     {
         return this.uuid;
     }
-	
-	
+    
+    
     
     /**
      * 获取：数据库产品名称
@@ -538,6 +538,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
      * 
      * @param i_XJavaID
      */
+    @Override
     public void setXJavaID(String i_XJavaID)
     {
         this.xjavaID = i_XJavaID;
@@ -550,6 +551,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
      * 
      * @return
      */
+    @Override
     public String getXJavaID()
     {
         return this.xjavaID;
@@ -557,6 +559,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
 
 
 
+    @Override
     public int hashCode()
     {
         return this.getObjectID().hashCode();
@@ -569,6 +572,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
      * 
      * @param i_Comment
      */
+    @Override
     public void setComment(String i_Comment)
     {
         this.comment = i_Comment;
@@ -581,6 +585,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
      *
      * @return
      */
+    @Override
     public String getComment()
     {
         return this.comment;
@@ -588,6 +593,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     
     
     
+    @Override
     public boolean equals(Object i_Other)
     {
         if ( null == i_Other )
@@ -607,12 +613,13 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
             return false;
         }
     }
-	
-	
-	
-	public int compareTo(DataSourceGroup i_Other)
-	{
-	    if ( null == i_Other )
+    
+    
+    
+    @Override
+    public int compareTo(DataSourceGroup i_Other)
+    {
+        if ( null == i_Other )
         {
             return 1;
         }
@@ -624,7 +631,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
         {
             return this.getObjectID().compareTo(i_Other.getObjectID());
         }
-	}
+    }
 
 
 
@@ -661,21 +668,21 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
         
         return v_Buffer.toString();
     }
-	
-	
-	
-	/*
+    
+    
+    
+    /*
     ZhengWei(HY) Del 2016-07-30
     不能实现这个方法。首先JDK中的Hashtable、ArrayList中也没有实现此方法。
     它会在元素还有用，但集合对象本身没有用时，释放元素对象
     
     一些与finalize相关的方法，由于一些致命的缺陷，已经被废弃了
-	protected void finalize() throws Throwable 
-	{
-		this.dataSources.clear();
-		
-		super.finalize();
-	}
-	*/
-	
+    protected void finalize() throws Throwable
+    {
+        this.dataSources.clear();
+        
+        super.finalize();
+    }
+    */
+    
 }
