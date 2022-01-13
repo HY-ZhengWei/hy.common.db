@@ -12,11 +12,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.hy.common.Help;
+import org.hy.common.MethodReflect;
+import org.hy.common.PartitionMap;
 import org.hy.common.SplitSegment;
 import org.hy.common.SplitSegment.InfoType;
 import org.hy.common.StringHelp;
-import org.hy.common.MethodReflect;
-import org.hy.common.PartitionMap;
 
 
 
@@ -27,7 +27,7 @@ import org.hy.common.PartitionMap;
  * 
  * 主要对类似如下的SQL信息（我们叫它为:占位符SQL）进行分析后，并根据Java的 "属性类(或叫值对应类)" 转换为真实能被执行的SQL。
  * 
- * SELECT  * 
+ * SELECT  *
  *   FROM  Dual
  *  WHERE  BeginTime = TO_DATE(':BeginTime' ,'YYYY-MM-DD HH24:MI:SS')
  *    AND  EndTime   = TO_DATE(':EndTime'   ,'YYYY-MM-DD HH24:MI:SS')
@@ -40,30 +40,30 @@ import org.hy.common.PartitionMap;
  * 
  *            1. 当 "属性类" 没有对应的 getBeginTime() 方法时，
  *               生成的可执行SQL中将不包括 "BeginTime = TO_DATE(':BeginTime' ,'YYYY-MM-DD HH24:MI:SS')" 的部分。
- *               
+ * 
  *            2. 当 "属性类" 有对应的 getBeginTime() 方法时，但返回值为 null时，
  *               生成的可执行SQL中将不包括 "BeginTime = TO_DATE(':BeginTime' ,'YYYY-MM-DD HH24:MI:SS')" 的部分。
- *               
+ * 
  *            3. ":BeginTime" 占位符的命名，要符合Java的驼峰命名规则，但首字母可以大写，也可以小写。
- *            
+ * 
  *            4. ":Statue" 占位符对应 "属性类" getStatue() 方法的返回值类型为基础类型(int、double)时，
  *               不可能为 null 值的情况。即，此占位符在可执行SQL中是必须存在。
  *               如果想其可变，须使用 Integer、Double 类型的返回值类型。
  *               当然，我们还提供了一个 getSQL(Map<String ,Object> i_Values) 方法为解决这个问题。
- *    
+ * 
  * @author      ZhengWei(HY)
  * @createDate  2012-10-31
- * @version     v1.0  
- *              v2.0  2014-07-29  1.使用简单替换方式(即Map之后，对象也使用此方式)  
+ * @version     v1.0
+ *              v2.0  2014-07-29  1.使用简单替换方式(即Map之后，对象也使用此方式)
  *                                2.支持动态SQL，即当 <[ ... ]> 符号内的占位符无传入值时，
- *                                  最终生成的执行SQL中，也无包含 <[ ... ]> 内的SQL语句 
- *                                  
+ *                                  最终生成的执行SQL中，也无包含 <[ ... ]> 内的SQL语句
+ * 
  *              v3.0  2015-12-10  1. getSQL(Object) 方法，SQL语句生成时，对于占位符，可实现xxx.yyy.www(或getXxx.getYyy.getWww)全路径的解释。如，':shool.BeginTime'
- *              
+ * 
  *              v4.0  2016-03-16  1. getSQL(Map) 方法中入参Map中的Map.key，将不再区分大小写的模式配置参数。在此之前是区分大小写的，不方便。
  *                                2. getSQL(Map) 方法中入参Map中的Map.value，当为MethodReflect类型时，再通过MethodReflect.invoke()方法获取最终的填充值。
  *                                   可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。比如，向数据库表插入数据时，通过Java生成主键的功能。
- *                                   
+ * 
  *              v5.0  2016-07-29  1. getSQL(Map) 方法，实现xxx.yyy.www(或getXxx.getYyy.getWww)全路径的解释
  *                                2. getSQL(Object) 方法中参数Getter方法的返回值，当为MethodReflect类型时，再通过MethodReflect.invoke()方法获取最终的填充值。
  *                                   可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。比如，向数据库表插入数据时，通过Java生成主键的功能。
@@ -101,6 +101,7 @@ import org.hy.common.PartitionMap;
  *                                         一般用于由外界动态生成的在 IN 语法中，如 IN ('A' ,'B' ,'C' ... ,'Z')，此时这里的单引号就不应被替换。
  *              v16.0 2020-06-08  1. 添加：预解析的占位符，再也不能刻意注意点位符的顺序了。可以像常规SQL的占位符一样，任意摆放了。
  *                                2. 优化：预解析的占位符，不再要求去掉左右两边的单引号了。即与常规SQL的占位符一样。
+ *              v17.0 2022-01-13  1. 添加：识别SQL语句的类型功能，支持对 WITH AS 的语句的识别
  */
 public class DBSQL implements Serializable
 {
@@ -142,7 +143,7 @@ public class DBSQL implements Serializable
     
     
     
-    static 
+    static
     {
         $ReplaceKeys.put("\t"  ," ");
         $ReplaceKeys.put("\r"  ," ");
@@ -185,7 +186,7 @@ public class DBSQL implements Serializable
     /** 占位符取值条件 */
     private Map<String ,DBConditions> conditions;
     
-    /** 
+    /**
      * 是否默认为NULL值写入到数据库。针对所有占位符做的统一设置。
      * 
      * 当 this.defaultNull = true 时，任何类型的值为null对象时，均向以NULL值写入到数据库。
@@ -193,7 +194,7 @@ public class DBSQL implements Serializable
      *      1. String 类型的值，按 "" 空字符串写入到数据库 或 拼接成SQL语句
      *      2. 其它类型的值，以NULL值写入到数据库。
      * 
-     * 默认为：false。 
+     * 默认为：false。
      */
     private boolean                   defaultNull;
     
@@ -331,6 +332,35 @@ public class DBSQL implements Serializable
             this.sqlType = $DBSQL_TYPE_DELETE;
             return;
         }
+        
+        
+        String v_SQLText = this.sqlText.toUpperCase().trim();
+        v_SQLText = " " + StringHelp.replaceAll(v_SQLText ,new String[] {"\n" ,"\r" ,"\t" ,"(" ,")"} ,new String [] {" "});
+        if ( StringHelp.isContains(v_SQLText ,true ," WITH " ," AS ") )
+        {
+            if ( StringHelp.isContains(v_SQLText ," DELETE ") )
+            {
+                this.sqlType = $DBSQL_TYPE_DELETE;
+                return;
+            }
+            else if ( StringHelp.isContains(v_SQLText ," UPDATE ") )
+            {
+                this.sqlType      = $DBSQL_TYPE_UPDATE;
+                this.sqlTableName = parserTableNameByUpdate(this.sqlText);
+                return;
+            }
+            else if ( StringHelp.isContains(v_SQLText ," INSERT ") )
+            {
+                this.sqlType      = $DBSQL_TYPE_INSERT;
+                this.sqlTableName = parserTableNameByInsert(this.sqlText);
+                return;
+            }
+            else
+            {
+                this.sqlType = $DBSQL_TYPE_SELECT;
+                return;
+            }
+        }
     }
     
     
@@ -423,7 +453,7 @@ public class DBSQL implements Serializable
                 }
                 else if ( !v_HaveFrom )
                 {
-                   return v_Item; 
+                   return v_Item;
                 }
             }
             else if ( $Update.equals(v_Item) )
@@ -442,7 +472,7 @@ public class DBSQL implements Serializable
      * 
      * @param sqlText
      */
-    public synchronized void setSqlText(String i_SQLText) 
+    public synchronized void setSqlText(String i_SQLText)
     {
         this.sqlText = StringHelp.replaceAll(Help.NVL(i_SQLText).trim() ,$ReplaceKeys);
         
@@ -465,7 +495,7 @@ public class DBSQL implements Serializable
      * 
      * @return
      */
-    public synchronized String getSqlText() 
+    public synchronized String getSqlText()
     {
         return sqlText;
     }
@@ -478,7 +508,7 @@ public class DBSQL implements Serializable
      * 入参类型是Map时，在处理NULL与入参类型是Object，是不同的。
      *   1. Map填充为""空的字符串。
      *   2. Object填充为 "NULL" ，可以支持空值针的写入。
-     *   
+     * 
      *   但上方两种均可以通过配置<condition><name>占位符名称<name></condition>，向数据库写入空值针。
      * 
      * @param i_Obj
@@ -497,7 +527,7 @@ public class DBSQL implements Serializable
      * 入参类型是Map时，在处理NULL与入参类型是Object，是不同的。
      *   1. Map填充为""空的字符串。
      *   2. Object填充为 "NULL" ，可以支持空值针的写入。
-     *   
+     * 
      *   但上方两种均可以通过配置<condition><name>占位符名称<name></condition>，向数据库写入空值针。
      * 
      * @param i_Obj
@@ -595,7 +625,7 @@ public class DBSQL implements Serializable
                                 v_GetterValue = v_MethodReflect.invoke();
                             }
                         }
-                        else  
+                        else
                         {
                             // 全局占位符 ZhengWei(HY) Add 2019-03-06
                             v_GetterValue = Help.getValueIgnoreCase(DBSQLStaticParams.getInstance() ,v_PlaceHolder);
@@ -757,11 +787,11 @@ public class DBSQL implements Serializable
      * 
      * Map.key  即为占位符。
      *     2016-03-16 将不再区分大小写的模式配置参数。
-     *     
+     * 
      * 入参类型是Map时，在处理NULL与入参类型是Object，是不同的。
      *   1. Map填充为""空的字符串。
      *   2. Object填充为 "NULL" ，可以支持空值针的写入。
-     *   
+     * 
      *   但上方两种均可以通过配置<condition><name>占位符名称<name></condition>，向数据库写入空值针。
      * 
      * @param i_Obj
@@ -779,11 +809,11 @@ public class DBSQL implements Serializable
      * 
      * Map.key  即为占位符。
      *     2016-03-16 将不再区分大小写的模式配置参数。
-     *     
+     * 
      * 入参类型是Map时，在处理NULL与入参类型是Object，是不同的。
      *   1. Map填充为""空的字符串。
      *   2. Object填充为 "NULL" ，可以支持空值针的写入。
-     *   
+     * 
      *   但上方两种均可以通过配置<condition><name>占位符名称<name></condition>，向数据库写入空值针。
      * 
      * @param i_Obj
@@ -1278,7 +1308,7 @@ public class DBSQL implements Serializable
     
     
     
-    public int getSQLType() 
+    public int getSQLType()
     {
         return sqlType;
     }
@@ -1298,7 +1328,7 @@ public class DBSQL implements Serializable
     /**
      * 设置：SQL语句操作的表名称。用于Insert、Update语句
      * 
-     * @param sqlTableName 
+     * @param sqlTableName
      */
     public void setSqlTableName(String sqlTableName)
     {
@@ -1322,7 +1352,7 @@ public class DBSQL implements Serializable
      * 
      * 采用类似工厂方法构造 DBSQLFill，惟一的目的就是为了生成SQL时，减少IF判断，提高速度。
      * 
-     * @param i_KeyReplace 
+     * @param i_KeyReplace
      */
     public void setKeyReplace(boolean i_KeyReplace)
     {
@@ -1353,7 +1383,7 @@ public class DBSQL implements Serializable
     /**
      * 设置：是否进行安全检查，防止SQL注入。默认为：true
      * 
-     * @param safeCheck 
+     * @param safeCheck
      */
     public void setSafeCheck(boolean safeCheck)
     {
@@ -1375,7 +1405,7 @@ public class DBSQL implements Serializable
     /**
      * 获取：不是占位符的关键字的排除过滤。区分大小字。前缀无须冒号
      * 
-     * @param i_NotPlaceholders 
+     * @param i_NotPlaceholders
      */
     public void setNotPlaceholderSet(Set<String> i_NotPlaceholders)
     {
@@ -1418,7 +1448,7 @@ public class DBSQL implements Serializable
     /**
      * 设置：当this.keyReplace=true时有效。表示个别不替换数据库关键字的占位符。前缀无须冒号
      * 
-     * @param notKeyReplace 
+     * @param notKeyReplace
      */
     public void setNotKeyReplaceSet(Set<String> notKeyReplace)
     {
@@ -1463,7 +1493,7 @@ public class DBSQL implements Serializable
     /**
      * 设置：占位符取值条件
      * 
-     * @param conditions 
+     * @param conditions
      */
     public void setConditions(Map<String ,DBConditions> conditions)
     {
@@ -1574,7 +1604,7 @@ public class DBSQL implements Serializable
      * 
      * 默认为：false。
      * 
-     * @param defaultNull 
+     * @param defaultNull
      */
     public void setDefaultNull(boolean defaultNull)
     {
@@ -1596,7 +1626,7 @@ public class DBSQL implements Serializable
     /**
      * 设置：数据库连接池组
      * 
-     * @param i_DataSourceGroup 
+     * @param i_DataSourceGroup
      */
     public void setDataSourceGroup(DataSourceGroup i_DataSourceGroup)
     {
@@ -1605,6 +1635,7 @@ public class DBSQL implements Serializable
 
 
 
+    @Override
     public String toString()
     {
         return this.sqlText;
@@ -1618,7 +1649,7 @@ public class DBSQL implements Serializable
     它会在元素还有用，但集合对象本身没有用时，释放元素对象
     
     一些与finalize相关的方法，由于一些致命的缺陷，已经被废弃了
-    protected void finalize() throws Throwable 
+    protected void finalize() throws Throwable
     {
         this.segments.clear();
         
@@ -1633,7 +1664,7 @@ public class DBSQL implements Serializable
 
 
 /**
- * 填充占位符的类 
+ * 填充占位符的类
  *
  * @author      ZhengWei(HY)
  * @createDate  2016-08-09
@@ -1700,7 +1731,7 @@ interface DBSQLFill
     /**
      * 将数值(i_Value)中的单引号替换成两个单引号后，再替换首个占位符
      * 
-     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定
      * 
      * @author      ZhengWei(HY)
      * @createDate  2019-10-11
@@ -1721,7 +1752,7 @@ interface DBSQLFill
      * 
      * 替换公式：i_Info.replaceAll(":" + i_PlaceHolder , i_Value);
      * 
-     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定
      * 
      * @author      ZhengWei(HY)
      * @createDate  2019-10-11
@@ -1742,7 +1773,7 @@ interface DBSQLFill
      * 
      * 替换公式：i_Info.replaceAll("':" + i_PlaceHolder + "'", i_Value.replaceAll("'" ,"''"));
      * 
-     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定
      * 
      * @author      ZhengWei(HY)
      * @createDate  2019-10-11
@@ -1823,6 +1854,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         try
@@ -1840,7 +1872,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
     /**
      * 将数值(i_Value)中的单引号替换成两个单引号后，再替换首个占位符
      * 
-     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定
      * 
      * @author      ZhengWei(HY)
      * @createDate  2019-10-11
@@ -1852,6 +1884,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String onlyFillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         return fillFirst(i_Info ,i_PlaceHolder ,i_Value ,i_DBType);
@@ -1874,6 +1907,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         try
@@ -1893,7 +1927,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * 
      * 替换公式：i_Info.replaceAll(":" + i_PlaceHolder , i_Value);
      * 
-     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定
      * 
      * @author      ZhengWei(HY)
      * @createDate  2019-10-11
@@ -1905,6 +1939,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String onlyFillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         return fillAll(i_Info ,i_PlaceHolder ,i_Value ,i_DBType);
@@ -1927,6 +1962,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         try
@@ -1946,7 +1982,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * 
      * 替换公式：i_Info.replaceAll("':" + i_PlaceHolder + "'", i_Value.replaceAll("'" ,"''"));
      * 
-     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定
      * 
      * @author      ZhengWei(HY)
      * @createDate  2019-10-11
@@ -1958,6 +1994,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String onlyFillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         return fillAllMark(i_Info ,i_PlaceHolder ,i_Value ,i_DBType);
@@ -1977,6 +2014,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String fillSpace(String i_Info ,String i_PlaceHolder)
     {
         return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,"");
@@ -2064,6 +2102,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String fillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         try
@@ -2109,7 +2148,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
     /**
      * 将数值(i_Value)中的单引号替换成两个单引号后，再替换首个占位符
      * 
-     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定
      * 
      * @author      ZhengWei(HY)
      * @createDate  2019-10-11
@@ -2121,6 +2160,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String onlyFillFirst(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         try
@@ -2150,6 +2190,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String fillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         try
@@ -2197,7 +2238,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * 
      * 替换公式：i_Info.replaceAll(":" + i_PlaceHolder , i_Value);
      * 
-     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定
      * 
      * @author      ZhengWei(HY)
      * @createDate  2019-10-11
@@ -2209,6 +2250,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String onlyFillAll(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         try
@@ -2238,6 +2280,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         String v_PH = "':" + i_PlaceHolder + "'";
@@ -2287,7 +2330,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * 
      * 替换公式：i_Info.replaceAll("':" + i_PlaceHolder + "'", i_Value.replaceAll("'" ,"''"));
      * 
-     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定  
+     * 只填充，不替换特殊字符。主要用于 “条件DBConditions” ，条件中的数值交由开发者来决定
      * 
      * @author      ZhengWei(HY)
      * @createDate  2019-10-11
@@ -2299,6 +2342,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_DBType       数据库类型。见DataSourceGroup.$DBType_ 前缀的系列常量
      * @return
      */
+    @Override
     public String onlyFillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
         String v_PH = "':" + i_PlaceHolder + "'";
@@ -2326,6 +2370,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
      * @param i_PlaceHolder
      * @return
      */
+    @Override
     public String fillSpace(String i_Info ,String i_PlaceHolder)
     {
         return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,"");
