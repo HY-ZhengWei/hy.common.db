@@ -754,6 +754,12 @@ public class DBSQL implements Serializable
                     {
                         exce.printStackTrace();
                     }
+                    
+                    if ( v_MethodReflect != null )
+                    {
+                        v_MethodReflect.clearDestroy();
+                        v_MethodReflect = null;
+                    }
                 }
                 
                 if ( InfoType.$TextInfo == v_DBSQL_Segment.getInfoType() )

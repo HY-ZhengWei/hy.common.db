@@ -19,9 +19,9 @@ import com.greenpineyu.fel.context.MapContext;
 
 
 /**
- * 占位符取值条件。当条件满足时，占位符对应的值对被填充应用到SQL语句中。 
+ * 占位符取值条件。当条件满足时，占位符对应的值对被填充应用到SQL语句中。
  * 
- * 用于动态标识 <[ ... ]>之内的占位符，可以控制动态标识内的SQL段是否拼接到最终执行SQL上执行。 
+ * 用于动态标识 <[ ... ]>之内的占位符，可以控制动态标识内的SQL段是否拼接到最终执行SQL上执行。
  * 
  * 占位符X按某个设定的条件取值，当条件满足(True)时取值A，否则取值B。
  * 取值A、B可以如下四种取值类型：
@@ -29,7 +29,7 @@ import com.greenpineyu.fel.context.MapContext;
  *      2.  另一个占位符Y映射的值，须以英文冒号为前缀开头；
  *      3.  常量字符串；
  *      4.  空指针NULL值（条件不满足时的默认值）。
- *      
+ * 
  * 取值A、B中的占位符及占位符X均支持以下两如高级功能：
  *      1.  支持xx.yy.zz面向对象；
  *      2.  支持函数型占位符。即占位符是一个方法的引用。占位符对应的数值，通过引用方法的返回值获取。
@@ -71,19 +71,19 @@ public class DBCondition implements Serializable
     /** 占位符的名称。不包括：冒号。不区分大小写 */
     private String                        name;
     
-    /** 
+    /**
      * Fel条件表达式
      * 
      * 形式为带占位符的Fel条件，
-     *    如：:c01=='1' && :c02=='2' 
+     *    如：:c01=='1' && :c02=='2'
      *    如：:c01==NULL || :c01==''  判定是否为NULL对象或空字符串
      */
     private String                        condition;
     
-    /** 
+    /**
      * 解释出来的Fel条件。与this.condition的区别是：它是没有占位符
      * 
-     *    如：c01=='1' && c02=='2' 
+     *    如：c01=='1' && c02=='2'
      *    如：c01==NULL || c01==''  判定是否为NULL对象或空字符串
      */
     private String                        conditionFel;
@@ -417,7 +417,7 @@ public class DBCondition implements Serializable
      */
     public boolean isPass(Map<String ,?> i_ConditionValues)
     {
-        if ( Help.isNull(this.condition) 
+        if ( Help.isNull(this.condition)
           || Help.isNull(this.conditionFel)
           || Help.isNull(this.placeholders) )
         {
@@ -465,7 +465,7 @@ public class DBCondition implements Serializable
     @SuppressWarnings("unchecked")
     public boolean isPass(Object i_ConditionValues)
     {
-        if ( Help.isNull(this.condition) 
+        if ( Help.isNull(this.condition)
           || Help.isNull(this.conditionFel)
           || Help.isNull(this.placeholders) )
         {
@@ -532,7 +532,7 @@ public class DBCondition implements Serializable
             }
         }
         
-        return v_Value; 
+        return v_Value;
     }
     
     
@@ -582,6 +582,9 @@ public class DBCondition implements Serializable
                     v_Value = ((MethodReflect)v_Value).invoke();
                 }
             }
+            
+            v_MethodReflect.clearDestroy();
+            v_MethodReflect = null;
         }
         
         return v_Value;
@@ -603,7 +606,7 @@ public class DBCondition implements Serializable
      * 获取：Fel条件表达式
      * 
      * 形式为带占位符的Fel条件，
-     *    如：:c01=='1' && :c02=='2' 
+     *    如：:c01=='1' && :c02=='2'
      *    如：:c01==NULL || :c01==''  判定是否为NULL对象或空字符串
      */
     public String getCondition()
@@ -636,7 +639,7 @@ public class DBCondition implements Serializable
     /**
      * 设置：占位符的名称。不包括：冒号。不区分大小写
      * 
-     * @param i_Name 
+     * @param i_Name
      */
     public void setName(String i_Name)
     {
@@ -671,10 +674,10 @@ public class DBCondition implements Serializable
      * 设置：Fel条件表达式
      * 
      * 形式为带占位符的Fel条件，
-     *    如：:c01=='1' && :c02=='2' 
+     *    如：:c01=='1' && :c02=='2'
      *    如：:c01==NULL || :c01==''  判定是否为NULL对象或空字符串
-     *    
-     * @param i_Condition 
+     * 
+     * @param i_Condition
      */
     public void setCondition(String i_Condition)
     {
@@ -744,7 +747,7 @@ public class DBCondition implements Serializable
     /**
      * 设置：条件满足时的真值。也可以是另一个占位符，但必须以冒号开头。不区分大小写
      * 
-     * @param i_TrueValue 
+     * @param i_TrueValue
      */
     public void setTrueValue(String i_TrueValue)
     {
@@ -772,7 +775,7 @@ public class DBCondition implements Serializable
     /**
      * 设置：条件不满足时的假值。也可以是另一个占位符，但必须以冒号开头。不区分大小写
      * 
-     * @param i_FalseValue 
+     * @param i_FalseValue
      */
     public void setFalseValue(String i_FalseValue)
     {
