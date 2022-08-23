@@ -446,6 +446,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
                                     {
                                         this.dbURLs.add(v_Value.toString());
                                         v_IsFind = true;
+                                        break;
                                     }
                                 }
                                 catch (Exception exce)
