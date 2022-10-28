@@ -102,6 +102,7 @@ import org.hy.common.StringHelp;
  *              v16.0 2020-06-08  1. 添加：预解析的占位符，再也不能刻意注意点位符的顺序了。可以像常规SQL的占位符一样，任意摆放了。
  *                                2. 优化：预解析的占位符，不再要求去掉左右两边的单引号了。即与常规SQL的占位符一样。
  *              v17.0 2022-01-13  1. 添加：识别SQL语句的类型功能，支持对 WITH AS 的语句的识别
+ *              v18.0 2022-10-28  1. 修改：parserPreparedSQL() 方法添加v_PBeing修复解释占位符的错误。发现人：程元丰
  */
 public class DBSQL implements Serializable
 {
@@ -1111,6 +1112,7 @@ public class DBSQL implements Serializable
                 String v_Info         = v_DBSQL_Segment.getInfo();
                 int    v_ReplaceCount = 0;
                 int    v_PSize        = v_Placeholders.rowCount();
+                int    v_PBegin       = v_Ret.getPlaceholders().size();
                 
                 // 先初始化集合中的所有元素
                 for (int i=1; i<=v_PSize; i++)
@@ -1134,7 +1136,8 @@ public class DBSQL implements Serializable
                         }
                         
                         v_Info = StringHelp.replaceFirst(v_Info ,v_PKey ,"?");
-                        v_Ret.getPlaceholders().set(v_PIndex ,v_PlaceholderIndexes.getKey());
+                        v_Ret.getPlaceholders().set(v_PBegin + v_PIndex ,v_PlaceholderIndexes.getKey());
+                        v_ReplaceCount++;
                     }
                 }
                 
