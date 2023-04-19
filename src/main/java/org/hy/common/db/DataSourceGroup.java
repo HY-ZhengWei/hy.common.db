@@ -34,6 +34,7 @@ import org.hy.common.XJavaID;
  *                                 添加：统一第三监控接口
  *              v6.0   2018-03-09  添加：实现XJavaID接口，在数据库异常时，能更精确的报出异常的数据库是谁。
  *              v7.0   2019-03-12  添加：获取数据库连接信息。
+ *              v8.0   2023-04-18  添加：MariaDB数据库类型的识别
  */
 public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJavaID ,Serializable
 {
@@ -42,6 +43,8 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     public static final String $DBType_Oracle     = "ORACLE";
     
     public static final String $DBType_MySQL      = "MYSQL";
+    
+    public static final String $DBType_MariaDB    = "MARIADB";
     
     public static final String $DBType_SQLServer  = "SQLSERVER";
     
@@ -254,6 +257,10 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
             else if ( v_DBName.indexOf("MYSQL") >= 0 )
             {
                 this.dbProductType = $DBType_MySQL;
+            }
+            else if ( v_DBName.indexOf("MARIADB") >= 0 )
+            {
+                this.dbProductType = $DBType_MariaDB;
             }
             else if ( v_DBName.indexOf("MICROSOFT") >= 0 )
             {

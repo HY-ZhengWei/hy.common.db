@@ -102,7 +102,7 @@ import org.hy.common.StringHelp;
  *              v16.0 2020-06-08  1. 添加：预解析的占位符，再也不能刻意注意点位符的顺序了。可以像常规SQL的占位符一样，任意摆放了。
  *                                2. 优化：预解析的占位符，不再要求去掉左右两边的单引号了。即与常规SQL的占位符一样。
  *              v17.0 2022-01-13  1. 添加：识别SQL语句的类型功能，支持对 WITH AS 的语句的识别
- *              v18.0 2022-10-28  1. 修改：parserPreparedSQL() 方法添加v_PBeing修复解释占位符的错误。发现人：程元丰
+ *              v18.0 2022-10-28  1. 修改：parserPreparedSQL() 方法添加v_PBegin修复解释占位符的错误。发现人：程元丰
  */
 public class DBSQL implements Serializable
 {
@@ -2118,7 +2118,8 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         {
             if ( (this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder)) && this.isAllowReplace(i_Value) )
             {
-                if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
+                if ( DataSourceGroup.$DBType_MySQL  .equals(i_DBType)
+                  || DataSourceGroup.$DBType_MariaDB.equals(i_DBType) )
                 {
                     return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL));
                 }
@@ -2136,7 +2137,8 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         {
             if ( (this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder)) && this.isAllowReplace(i_Value) )
             {
-                if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
+                if ( DataSourceGroup.$DBType_MySQL  .equals(i_DBType)
+                  || DataSourceGroup.$DBType_MariaDB.equals(i_DBType) )
                 {
                     return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL)));
                 }
@@ -2206,7 +2208,8 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         {
             if ( (this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder)) && this.isAllowReplace(i_Value) )
             {
-                if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
+                if ( DataSourceGroup.$DBType_MySQL  .equals(i_DBType)
+                  || DataSourceGroup.$DBType_MariaDB.equals(i_DBType) )
                 {
                     return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL));
                 }
@@ -2224,7 +2227,8 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         {
             if ( (this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder)) && this.isAllowReplace(i_Value) )
             {
-                if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
+                if ( DataSourceGroup.$DBType_MySQL  .equals(i_DBType)
+                  || DataSourceGroup.$DBType_MariaDB.equals(i_DBType) )
                 {
                     return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL)));
                 }
@@ -2298,7 +2302,8 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         {
             if ( (this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder)) && this.isAllowReplace(i_Value) )
             {
-                if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
+                if ( DataSourceGroup.$DBType_MySQL  .equals(i_DBType)
+                  || DataSourceGroup.$DBType_MariaDB.equals(i_DBType) )
                 {
                     return StringHelp.replaceAll(i_Info ,v_PH ,StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL));
                 }
@@ -2316,7 +2321,8 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
         {
             if ( (this.notKeyReplace == null || !this.notKeyReplace.contains(i_PlaceHolder)) && this.isAllowReplace(i_Value) )
             {
-                if ( DataSourceGroup.$DBType_MySQL.equals(i_DBType) )
+                if ( DataSourceGroup.$DBType_MySQL  .equals(i_DBType)
+                  || DataSourceGroup.$DBType_MariaDB.equals(i_DBType) )
                 {
                     return StringHelp.replaceAll(i_Info ,v_PH ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL)));
                 }
