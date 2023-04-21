@@ -16,14 +16,19 @@ import org.hy.common.Help;
  * 数据库表的元数据信息
  * 
  * @author      ZhengWei(HY)
- * @version     v1.0  
  * @createDate  2012-11-07
+ * @version     v1.0
+ *              v1.1  2014-04-02  修复：字段重新别名后，无法XJava的问题
+ *              v2.0  2023-04-21  添加：字段类型获取
  */
-public class DBTableMetaData 
+public class DBTableMetaData
 {
     
     /** List.key = 字段索引号 List.value = 字段名称 */
     private List<String>            col_ByIndex;
+    
+    /** List.key = 字段索引号 List.value = 字段类型。对照 java.sql.Types */
+    private List<Integer>           colType_ByIndex;
     
     /** Map.key = 字段名称      Map.value = 字段索引号 */
     private Map<String  ,String>    col_ByName;
@@ -35,9 +40,10 @@ public class DBTableMetaData
     
     public DBTableMetaData(DBNameStyle i_ColNameStyle)
     {
-        this.col_ByIndex   = new ArrayList<String>();
-        this.col_ByName    = new HashMap<String ,String>();
-        this.col_NameStyle = i_ColNameStyle;
+        this.col_ByIndex     = new ArrayList<String>();
+        this.colType_ByIndex = new ArrayList<Integer>();
+        this.col_ByName      = new HashMap<String ,String>();
+        this.col_NameStyle   = i_ColNameStyle;
     }
     
     
@@ -65,7 +71,8 @@ public class DBTableMetaData
                 // getColumnName()  与 getColumnLabel() 的区别是：
                 // getColumnName()  为数据库字段的真实名称
                 // getColumnLabel() 为字段的别名，即 AS 关键字后的部分
-                this.addColumnInfo(v_ColIndex - 1 ,i_ResultSetMetaData.getColumnLabel(v_ColIndex));
+                this.addColumnInfo(      v_ColIndex - 1 ,i_ResultSetMetaData.getColumnLabel(v_ColIndex));
+                this.colType_ByIndex.add(v_ColIndex - 1 ,i_ResultSetMetaData.getColumnType( v_ColIndex));
             }
         }
         catch (Exception exce)
@@ -169,6 +176,24 @@ public class DBTableMetaData
     }
     
     
+    /**
+     * 获取字段类型（根据字段下标，从零开始）
+     * 
+     *  类型对照 java.sql.Types
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2023-04-21
+     * @version     v1.0
+     *
+     * @param i_ColIndex  字段索引号
+     * @return
+     */
+    public int getColumnType(int i_ColIndex)
+    {
+        return this.colType_ByIndex.get(i_ColIndex);
+    }
+    
+    
     
     /**
      * 返回字段个数
@@ -189,10 +214,12 @@ public class DBTableMetaData
     {
         this.col_ByIndex.clear();
         this.col_ByName.clear();
+        this.colType_ByIndex.clear();
     }
     
     
     
+    @Override
     public int hashCode()
     {
         return this.col_ByIndex.hashCode();
@@ -200,7 +227,8 @@ public class DBTableMetaData
 
 
 
-    public boolean equals(Object i_Other) 
+    @Override
+    public boolean equals(Object i_Other)
     {
         if ( i_Other == null )
         {
@@ -224,7 +252,7 @@ public class DBTableMetaData
     它会在元素还有用，但集合对象本身没有用时，释放元素对象
     
     一些与finalize相关的方法，由于一些致命的缺陷，已经被废弃了
-    protected void finalize() throws Throwable 
+    protected void finalize() throws Throwable
     {
         this.clear();
         
