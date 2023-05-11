@@ -103,11 +103,18 @@ import org.hy.common.StringHelp;
  *                                2. 优化：预解析的占位符，不再要求去掉左右两边的单引号了。即与常规SQL的占位符一样。
  *              v17.0 2022-01-13  1. 添加：识别SQL语句的类型功能，支持对 WITH AS 的语句的识别
  *              v18.0 2022-10-28  1. 修改：parserPreparedSQL() 方法添加v_PBegin修复解释占位符的错误。发现人：程元丰
+ *              v19.0 2023-05-11  1. 优化：正则表达式常量化
+ *                                2. 添加：识别 Merge、Truncate、Create、Kill等语法类型
+ *                                3. 添加：识别 Delete语法中的表名称
  */
 public class DBSQL implements Serializable
 {
     
     private static final long serialVersionUID = 6969242576876292691L;
+    
+    
+    /** 占位符是什么字符 */
+    public       static String               $Placeholder        = ":";
     
     
     
@@ -127,20 +134,70 @@ public class DBSQL implements Serializable
     
     
     
+    /** 匹配 <[ ... ]> 的字符串           无法包含< ( >三种特殊字符   "[ \\s]?<\\[[^(?!((<\\[)|(\\]>)))]+\\]>[ \\s]?" */
+    private final static String              $SQL_Find_Dynamic   = "[ \\s]?<\\[((?!<\\[|\\]>).)*\\]>[ \\s]?";
+    
+    /** 匹配 SELECT */
+    private final static String              $SQL_Find_Select    = "^( )*[Ss][Ee][Ll][Ee][Cc][Tt][ ]+";
+    
+    /** 匹配 INSERT */
+    private final static String              $SQL_Find_Insert    = "^( )*[Ii][Nn][Ss][Ee][Rr][Tt][ ]+";
+    
+    /** 匹配 MERGE */
+    private final static String              $SQL_Find_Merge     = "^( )*[Mm][Ee][Rr][Gg][Ee][ ]+";
+    
+    /** 匹配 UPDATE */
+    private final static String              $SQL_Find_Update    = "^( )*[Uu][Pp][Dd][Aa][Tt][Ee][ ]+";
+    
+    /** 匹配 DELETE */
+    private final static String              $SQL_Find_Delete    = "^( )*[Dd][Ee][Ll][Ee][Tt][Ee][ ]+";
+    
+    /** 匹配 TRUNCATE */
+    private final static String              $SQL_Find_Truncate  = "^( )*[Tt][Rr][Uu][Nn][Cc][Aa][Tt][Ee][ ]+";
+    
+    /** 匹配 CALL */
+    private final static String              $SQL_Find_Call      = "^( )*[Cc][Aa][Ll][Ll][ ]+";
+    
+    /** 匹配 CREATE */
+    private final static String              $SQL_Find_Create    = "^( )*[Cc][Rr][Ee][Aa][Tt][Ee][ ]+";
+    
+    /** 匹配 DROP */
+    private final static String              $SQL_Find_Drop      = "^( )*[Dd][Rr][Oo][Pp][ ]+";
+    
+    /** 匹配 ALTER */
+    private final static String              $SQL_Find_Alter     = "^( )*[Aa][Ll][Tt][Ee][Rr][ ]+";
+    
+    /** 匹配 GRANT */
+    private final static String              $SQL_Find_Grant     = "^( )*[Gg][Rr][Aa][Nn][Tt][ ]+";
+    
+    /** 匹配 REVOKE */
+    private final static String              $SQL_Find_Revoke    = "^( )*[Rr][Ee][Vv][Oo][Kk][Ee][ ]+";
+    
+    /** 匹配 KILL */
+    private final static String              $SQL_Find_Kill      = "^( )*[Kk][Ii][Ll][Ll][ ]+";
+    
+    
+    
     /** 数据库中的NULL关键字 */
-    private final static String              $NULL        = "NULL";
+    private final static String              $NULL               = "NULL";
+                                                                 
+    private final static String              $Insert             = "INSERT";
     
-    private final static String              $Insert      = "INSERT";
+    private final static String              $Merge              = "MERGE";
+                                                                 
+    private final static String              $Into               = "INTO";
+                                                                 
+    private final static String              $Update             = "UPDATE";
+                                                                 
+    private final static String              $From               = "FROM";
+                                                                 
+    private final static String              $Where              = "WHERE";
     
-    private final static String              $Into        = "INTO";
+    private final static String              $Delete             = "DELETE";
     
-    private final static String              $Update      = "UPDATE";
-    
-    private final static String              $From        = "FROM";
-    
-    private final static String              $Where       = "WHERE";
-    
-    private final static Map<String ,String> $ReplaceKeys = new HashMap<String ,String>();
+    private final static String              $Truncate           = "TRUNCATE";
+                                                                 
+    private final static Map<String ,String> $ReplaceKeys        = new HashMap<String ,String>();
     
     
     
@@ -246,13 +303,10 @@ public class DBSQL implements Serializable
             return;
         }
         
-        
         this.parser_SQLType();
         
-        
         // 匹配 <[ ... ]> 的字符串
-//      List<SplitSegment> v_Segments = StringHelp.Split("[ \\s]?<\\[[^(?!((<\\[)|(\\]>)))]+\\]>[ \\s]?" ,this.sqlText);  无法包含< ( >三种特殊字符
-        List<SplitSegment> v_Segments = StringHelp.Split("[ \\s]?<\\[((?!<\\[|\\]>).)*\\]>[ \\s]?"       ,this.sqlText);
+        List<SplitSegment> v_Segments = StringHelp.Split($SQL_Find_Dynamic ,this.sqlText);
         for (SplitSegment v_SplitSegment : v_Segments)
         {
             DBSQL_Split v_DBSQL_Segment = new DBSQL_Split(v_SplitSegment);
@@ -287,7 +341,7 @@ public class DBSQL implements Serializable
         Matcher v_Matcher = null;
         
         
-        v_Pattern = Pattern.compile("^( )*[Ss][Ee][Ll][Ee][Cc][Tt][ ]+");
+        v_Pattern = Pattern.compile($SQL_Find_Select);
         v_Matcher = v_Pattern.matcher(this.sqlText);
         if ( v_Matcher.find() )
         {
@@ -306,7 +360,7 @@ public class DBSQL implements Serializable
         }
         */
         
-        v_Pattern = Pattern.compile("^( )*[Ii][Nn][Ss][Ee][Rr][Tt][ ]+");
+        v_Pattern = Pattern.compile($SQL_Find_Insert);
         v_Matcher = v_Pattern.matcher(this.sqlText);
         if ( v_Matcher.find() )
         {
@@ -316,7 +370,17 @@ public class DBSQL implements Serializable
         }
         
         
-        v_Pattern = Pattern.compile("^( )*[Uu][Pp][Dd][Aa][Tt][Ee][ ]+");
+        v_Pattern = Pattern.compile($SQL_Find_Merge);
+        v_Matcher = v_Pattern.matcher(this.sqlText);
+        if ( v_Matcher.find() )
+        {
+            this.sqlType      = $DBSQL_TYPE_INSERT;
+            this.sqlTableName = parserTableNameByInsert(this.sqlText);
+            return;
+        }
+        
+        
+        v_Pattern = Pattern.compile($SQL_Find_Update);
         v_Matcher = v_Pattern.matcher(this.sqlText);
         if ( v_Matcher.find() )
         {
@@ -326,11 +390,85 @@ public class DBSQL implements Serializable
         }
         
         
-        v_Pattern = Pattern.compile("^( )*[Dd][Ee][Ll][Ee][Tt][Ee][ ]+");
+        v_Pattern = Pattern.compile($SQL_Find_Delete);
         v_Matcher = v_Pattern.matcher(this.sqlText);
         if ( v_Matcher.find() )
         {
-            this.sqlType = $DBSQL_TYPE_DELETE;
+            this.sqlType      = $DBSQL_TYPE_DELETE;
+            this.sqlTableName = parserTableNameByDelete(this.sqlText);
+            return;
+        }
+        
+        
+        v_Pattern = Pattern.compile($SQL_Find_Truncate);
+        v_Matcher = v_Pattern.matcher(this.sqlText);
+        if ( v_Matcher.find() )
+        {
+            this.sqlType      = $DBSQL_TYPE_DELETE;
+            this.sqlTableName = parserTableNameByDelete(this.sqlText);
+            return;
+        }
+        
+        
+        v_Pattern = Pattern.compile($SQL_Find_Call);
+        v_Matcher = v_Pattern.matcher(this.sqlText);
+        if ( v_Matcher.find() )
+        {
+            this.sqlType = $DBSQL_TYPE_CALL;
+            return;
+        }
+        
+        
+        v_Pattern = Pattern.compile($SQL_Find_Create);
+        v_Matcher = v_Pattern.matcher(this.sqlText);
+        if ( v_Matcher.find() )
+        {
+            this.sqlType = $DBSQL_TYPE_DDL;
+            return;
+        }
+        
+        
+        v_Pattern = Pattern.compile($SQL_Find_Drop);
+        v_Matcher = v_Pattern.matcher(this.sqlText);
+        if ( v_Matcher.find() )
+        {
+            this.sqlType = $DBSQL_TYPE_DDL;
+            return;
+        }
+        
+        
+        v_Pattern = Pattern.compile($SQL_Find_Alter);
+        v_Matcher = v_Pattern.matcher(this.sqlText);
+        if ( v_Matcher.find() )
+        {
+            this.sqlType = $DBSQL_TYPE_DDL;
+            return;
+        }
+        
+        
+        v_Pattern = Pattern.compile($SQL_Find_Grant);
+        v_Matcher = v_Pattern.matcher(this.sqlText);
+        if ( v_Matcher.find() )
+        {
+            this.sqlType = $DBSQL_TYPE_DDL;
+            return;
+        }
+        
+        
+        v_Pattern = Pattern.compile($SQL_Find_Revoke);
+        v_Matcher = v_Pattern.matcher(this.sqlText);
+        if ( v_Matcher.find() )
+        {
+            this.sqlType = $DBSQL_TYPE_DDL;
+            return;
+        }
+        
+        
+        v_Pattern = Pattern.compile($SQL_Find_Kill);
+        v_Matcher = v_Pattern.matcher(this.sqlText);
+        if ( v_Matcher.find() )
+        {
+            this.sqlType = $DBSQL_TYPE_DDL;
             return;
         }
         
@@ -341,7 +479,8 @@ public class DBSQL implements Serializable
         {
             if ( StringHelp.isContains(v_SQLText ," DELETE ") )
             {
-                this.sqlType = $DBSQL_TYPE_DELETE;
+                this.sqlType      = $DBSQL_TYPE_DELETE;
+                this.sqlTableName = parserTableNameByDelete(this.sqlText);
                 return;
             }
             else if ( StringHelp.isContains(v_SQLText ," UPDATE ") )
@@ -356,7 +495,7 @@ public class DBSQL implements Serializable
                 this.sqlTableName = parserTableNameByInsert(this.sqlText);
                 return;
             }
-            else
+            else if ( StringHelp.isContains(v_SQLText ," SELECT ") )
             {
                 this.sqlType = $DBSQL_TYPE_SELECT;
                 return;
@@ -372,6 +511,7 @@ public class DBSQL implements Serializable
      * @author      ZhengWei(HY)
      * @createDate  2018-07-18
      * @version     v1.0
+     *              v2.0  2023-05-11  添加：Merge语法的支持
      *
      * @param i_SQL
      * @return
@@ -400,7 +540,7 @@ public class DBSQL implements Serializable
                     v_Into = true;
                 }
             }
-            else if ( $Insert.equals(v_Item) )
+            else if ( $Insert.equals(v_Item) || $Merge.equals(v_Item) )
             {
                 v_Insert = true;
             }
@@ -427,14 +567,50 @@ public class DBSQL implements Serializable
      */
     public static String parserTableNameByUpdate(String i_SQL)
     {
+        String    v_SQL    = StringHelp.replaceAll(Help.NVL(i_SQL).trim() ,$ReplaceKeys).toUpperCase();
+        String [] v_SQLArr = v_SQL.split(" ");
+        boolean   v_Update = false;
+        
+        for (String v_Item : v_SQLArr)
+        {
+            if ( Help.isNull(v_Item) )
+            {
+                continue;
+            }
+            else if ( v_Update )
+            {
+                return v_Item;
+            }
+            else if ( $Update.equals(v_Item) )
+            {
+                v_Update = true;
+            }
+        }
+        
+        return null;
+    }
+    
+    
+    
+    /**
+     * 解析Delete SQL语句的表名称
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2023-05-11
+     * @version     v1.0
+     *
+     * @param i_SQL
+     * @return
+     */
+    public static String parserTableNameByDelete(String i_SQL)
+    {
         String    v_SQL        = StringHelp.replaceAll(Help.NVL(i_SQL).trim() ,$ReplaceKeys).toUpperCase();
         String [] v_SQLArr     = v_SQL.split(" ");
         int       v_FromIndex  = v_SQL.indexOf($From);
         int       v_WhereIndex = v_SQL.indexOf($Where);
         boolean   v_HaveFrom   = v_FromIndex > 0 && (v_FromIndex < v_WhereIndex || v_WhereIndex <= 0);
-        boolean   v_Update     = false;
+        boolean   v_Delete     = false;
         boolean   v_From       = false;
-        String    v_TableName  = null;
         
         for (String v_Item : v_SQLArr)
         {
@@ -446,7 +622,7 @@ public class DBSQL implements Serializable
             {
                 return v_Item;
             }
-            else if ( v_Update )
+            else if ( v_Delete )
             {
                 if ( $From.equals(v_Item) )
                 {
@@ -457,13 +633,13 @@ public class DBSQL implements Serializable
                    return v_Item;
                 }
             }
-            else if ( $Update.equals(v_Item) )
+            else if ( $Delete.equals(v_Item) || $Truncate.equals(v_Item) )
             {
-                v_Update = true;
+                v_Delete = true;
             }
         }
         
-        return v_TableName;
+        return null;
     }
     
     
@@ -648,7 +824,7 @@ public class DBSQL implements Serializable
                                 boolean v_IsReplace = false;
                                 
                                 // 这里循环的原因是：每次((MethodReflect)v_GetterValue).invoke()执行后的返回值v_MRValue都可能不一样。
-                                while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
+                                while ( v_Info.indexOf($Placeholder + v_PlaceHolder) >= 0 )
                                 {
                                     // 可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。 ZhengWei(HY) Add 2016-03-18
                                     Object v_MRValue = ((MethodReflect)v_GetterValue).invoke();
@@ -903,7 +1079,7 @@ public class DBSQL implements Serializable
                             {
                                 boolean v_IsReplace = false;
                                 
-                                while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
+                                while ( v_Info.indexOf($Placeholder + v_PlaceHolder) >= 0 )
                                 {
                                     // 可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。 ZhengWei(HY) Add 2016-03-18
                                     Object v_GetterValue = ((MethodReflect)v_MapValue).invoke();
@@ -1124,7 +1300,7 @@ public class DBSQL implements Serializable
                 {
                     for (Integer v_PIndex : v_PlaceholderIndexes.getValue())
                     {
-                        String v_PKey      = ":" + v_PlaceholderIndexes.getKey();
+                        String v_PKey      = $Placeholder + v_PlaceholderIndexes.getKey();
                         String v_PKey2     = "'" + v_PKey + "'";
                         int    v_PKeyFind  = v_Info.indexOf(v_PKey);
                         int    v_PKeyFind2 = v_Info.indexOf(v_PKey2);
@@ -1235,7 +1411,7 @@ public class DBSQL implements Serializable
                             {
                                 boolean v_IsReplace = false;
                                 
-                                while ( v_Info.indexOf(":" + v_PlaceHolder) >= 0 )
+                                while ( v_Info.indexOf($Placeholder + v_PlaceHolder) >= 0 )
                                 {
                                     // 可实现SQL中的占位符，通过Java动态(或有业务时间逻辑的)填充值。 ZhengWei(HY) Add 2016-03-18
                                     Object v_GetterValue = ((MethodReflect)v_MapValue).invoke();
@@ -1868,11 +2044,11 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
     {
         try
         {
-            return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,i_Value);
+            return StringHelp.replaceFirst(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,i_Value);
         }
         catch (Exception exce)
         {
-            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+            return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
         }
     }
     
@@ -1921,11 +2097,11 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
     {
         try
         {
-            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,i_Value);
+            return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,i_Value);
         }
         catch (Exception exce)
         {
-            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+            return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
         }
     }
     
@@ -1980,7 +2156,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
         }
         catch (Exception exce)
         {
-            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+            return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
         }
     }
     
@@ -2026,7 +2202,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
     @Override
     public String fillSpace(String i_Info ,String i_PlaceHolder)
     {
-        return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,"");
+        return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,"");
     }
     
 }
@@ -2121,16 +2297,16 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
                 if ( DataSourceGroup.$DBType_MySQL  .equals(i_DBType)
                   || DataSourceGroup.$DBType_MariaDB.equals(i_DBType) )
                 {
-                    return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL));
+                    return StringHelp.replaceFirst(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL));
                 }
                 else
                 {
-                    return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+                    return StringHelp.replaceFirst(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
                 }
             }
             else
             {
-                return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,i_Value);
+                return StringHelp.replaceFirst(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,i_Value);
             }
         }
         catch (Exception exce)
@@ -2140,16 +2316,16 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
                 if ( DataSourceGroup.$DBType_MySQL  .equals(i_DBType)
                   || DataSourceGroup.$DBType_MariaDB.equals(i_DBType) )
                 {
-                    return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL)));
+                    return StringHelp.replaceFirst(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL)));
                 }
                 else
                 {
-                    return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+                    return StringHelp.replaceFirst(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
                 }
             }
             else
             {
-                return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+                return StringHelp.replaceFirst(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
             }
         }
     }
@@ -2176,11 +2352,11 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
     {
         try
         {
-            return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,i_Value);
+            return StringHelp.replaceFirst(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,i_Value);
         }
         catch (Exception exce)
         {
-            return StringHelp.replaceFirst(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+            return StringHelp.replaceFirst(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
         }
     }
     
@@ -2211,16 +2387,16 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
                 if ( DataSourceGroup.$DBType_MySQL  .equals(i_DBType)
                   || DataSourceGroup.$DBType_MariaDB.equals(i_DBType) )
                 {
-                    return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL));
+                    return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL));
                 }
                 else
                 {
-                    return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
+                    return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy));
                 }
             }
             else
             {
-                return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,i_Value);
+                return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,i_Value);
             }
         }
         catch (Exception exce)
@@ -2230,16 +2406,16 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
                 if ( DataSourceGroup.$DBType_MySQL  .equals(i_DBType)
                   || DataSourceGroup.$DBType_MariaDB.equals(i_DBType) )
                 {
-                    return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL)));
+                    return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace_MySQL ,$FillReplaceBy_MySQL)));
                 }
                 else
                 {
-                    return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
+                    return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(StringHelp.replaceAll(i_Value ,$FillReplace ,$FillReplaceBy)));
                 }
             }
             else
             {
-                return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+                return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
             }
         }
     }
@@ -2268,11 +2444,11 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
     {
         try
         {
-            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,i_Value);
+            return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,i_Value);
         }
         catch (Exception exce)
         {
-            return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+            return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
         }
     }
     
@@ -2388,7 +2564,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
     @Override
     public String fillSpace(String i_Info ,String i_PlaceHolder)
     {
-        return StringHelp.replaceAll(i_Info ,":" + i_PlaceHolder ,"");
+        return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,"");
     }
     
     

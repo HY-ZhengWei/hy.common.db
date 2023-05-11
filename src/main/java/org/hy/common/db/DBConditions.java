@@ -362,11 +362,11 @@ public class DBConditions implements Serializable
     /**
      * 设置：占位符的名称。不包括：冒号。不区分大小写
      * 
-     * @param i_Name 
+     * @param i_Name
      */
     public void setName(String i_Name)
     {
-        this.name = StringHelp.replaceAll(i_Name ,":" ,"");
+        this.name = StringHelp.replaceAll(i_Name ,DBSQL.$Placeholder ,"");
         
         if ( Help.isNull(this.conditions) )
         {
@@ -385,12 +385,12 @@ public class DBConditions implements Serializable
      * 设置：Fel条件表达式
      * 
      * 形式为带占位符的Fel条件，
-     *    如：:c01=='1' && :c02=='2' 
+     *    如：:c01=='1' && :c02=='2'
      *    如：:c01==NULL || :c01==''  判定是否为NULL对象或空字符串
-     *    
+     * 
      * 注意：遇到<if>就创建一个新的条件对象，并顺次添加到条件组中。
-     *    
-     * @param i_Condition 
+     * 
+     * @param i_Condition
      */
     public void setIf(String i_Condition)
     {
@@ -404,7 +404,7 @@ public class DBConditions implements Serializable
      * 
      * 注意：每次只设置最后一个条件对象的真值。这样才能保证顺次的设置条件组中的多个条件。
      * 
-     * @param i_TrueValue 
+     * @param i_TrueValue
      */
     public void setTrue(String i_TrueValue)
     {

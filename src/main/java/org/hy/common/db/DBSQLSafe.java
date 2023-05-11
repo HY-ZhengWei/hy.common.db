@@ -21,6 +21,7 @@ import com.greenpineyu.fel.FelEngineImpl;
  *              v2.0  2018-03-22  1.优化：李浩发现，当SQL占位符的实际填充字符串超级长(如字符串长度为8000)时，
  *                                     正则表达式在匹配时，性能损耗十分严重，CPU使用率可高达100%，并持续5秒左右。
  *                                2.优化：更加精准的判定AND、OR情况一下的SQL注入攻击。
+ *              v2.1 2023-05-11   1.添加：识别 Merge 语法
  */
 public final class DBSQLSafe
 {
@@ -35,13 +36,14 @@ public final class DBSQLSafe
     
     private static final String []   $Compares_Fel = {"!=" ,"<=" ,"<" ,">=" ,">" ,"=="};
     
-    private static final String [][] $SQLKeys      = {{" UNION "   ,"SELECT " ," FROM "} 
-                                                     ,{"EXEC "} 
-                                                     ,{"SELECT "   ," FROM "} 
-                                                     ,{"INSERT "   ,"INTO"}
+    private static final String [][] $SQLKeys      = {{" UNION "   ,"SELECT " ," FROM "}
+                                                     ,{"EXEC "}
+                                                     ,{"SELECT "   ," FROM "}
+                                                     ,{"INSERT "   ," INTO "}
+                                                     ,{"MERGE "    ," INTO "}
                                                      ,{"UPDATE "   ," SET "}
                                                      ,{"DELETE "}
-                                                     ,{"TRUNCATE " ,"TABLE "}};
+                                                     ,{"TRUNCATE " ," TABLE "}};
     
     private static final Pattern []  $Patterns     = new Pattern[$SQLKeys.length + 1];
     

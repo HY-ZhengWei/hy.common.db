@@ -349,7 +349,7 @@ public class DBCondition implements Serializable
         {
             return this.getValueByMap(this.name ,i_ConditionValues ,i_IsPlaceholderFunction);
         }
-        else if ( i_TrueFalseValue.startsWith(":") )
+        else if ( i_TrueFalseValue.startsWith(DBSQL.$Placeholder) )
         {
             return this.getValueByMap(i_TrueFalseValue.substring(1) ,i_ConditionValues ,i_IsPlaceholderFunction);
         }
@@ -390,7 +390,7 @@ public class DBCondition implements Serializable
         {
             return this.getValueByObject(this.name ,i_ConditionValues ,i_IsPlaceholderFunction);
         }
-        else if ( i_TrueFalseValue.startsWith(":") )
+        else if ( i_TrueFalseValue.startsWith(DBSQL.$Placeholder) )
         {
             return this.getValueByObject(i_TrueFalseValue.substring(1) ,i_ConditionValues ,i_IsPlaceholderFunction);
         }
@@ -691,7 +691,7 @@ public class DBCondition implements Serializable
             
             for (String v_Key : this.placeholders.keySet())
             {
-                this.conditionFel = StringHelp.replaceAll(this.conditionFel ,":" + v_Key ,StringHelp.replaceAll(v_Key ,"." ,"_"));
+                this.conditionFel = StringHelp.replaceAll(this.conditionFel ,DBSQL.$Placeholder + v_Key ,StringHelp.replaceAll(v_Key ,"." ,"_"));
             }
             
             this.conditionFel = StringHelp.replaceAll(this.conditionFel ,$Fel_BlockingUp ,new String[]{""});
@@ -755,7 +755,7 @@ public class DBCondition implements Serializable
         
         if ( i_TrueValue != null )
         {
-            if ( i_TrueValue.trim().startsWith(":") )
+            if ( i_TrueValue.trim().startsWith(DBSQL.$Placeholder) )
             {
                 this.trueValue = i_TrueValue.trim();
             }
@@ -783,7 +783,7 @@ public class DBCondition implements Serializable
         
         if ( i_FalseValue != null )
         {
-            if ( i_FalseValue.trim().startsWith(":") )
+            if ( i_FalseValue.trim().startsWith(DBSQL.$Placeholder) )
             {
                 this.falseValue = i_FalseValue.trim();
             }

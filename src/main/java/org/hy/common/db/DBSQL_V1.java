@@ -402,7 +402,7 @@ public class DBSQL_V1
             {
                 String v_Key = v_MapKeys.next();
                 
-                v_SQLStr = v_SQLStr.replaceAll(":" + v_Key ,i_Values.get(v_Key).toString());
+                v_SQLStr = v_SQLStr.replaceAll(DBSQL.$Placeholder + v_Key ,i_Values.get(v_Key).toString());
             }
             
             return v_SQLStr;
