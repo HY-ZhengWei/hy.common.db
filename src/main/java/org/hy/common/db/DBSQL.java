@@ -117,7 +117,7 @@ public class DBSQL implements Serializable
     private static final Logger              $Logger             = new Logger(DBSQL.class ,true);
     
     /** 占位符是什么字符 */
-    public       static String               $Placeholder        = ":";
+    public  static final String              $Placeholder        = ":";
     
     
     
@@ -182,22 +182,25 @@ public class DBSQL implements Serializable
     
     
     /** 匹配 WHERE <[ */
-    private final static String              $SQL_R_WhereDynamic = "^( )*[Ww][Hh][Ee][Rr][Ee][ ]+<\\[";
+    private final static String              $SQL_R_WhereDynamic = "( )*[Ww][Hh][Ee][Rr][Ee][ ]+<\\[";
+    
+    /** 匹配 WHERE : */
+    private final static String              $SQL_R_WherePlaceho = "( )*[Ww][Hh][Ee][Rr][Ee][ ]+:";
     
     /** 替换 WHERE AND */
-    private final static String              $SQL_R_WhereAnd     = "^( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Aa][Nn][Dd][ ]+";
+    private final static String              $SQL_R_WhereAnd     = "( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Aa][Nn][Dd][ ]+";
     
     /** 替换 WHERE OR */
-    private final static String              $SQL_R_WhereOr      = "^( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Oo][Rr][ ]+";
+    private final static String              $SQL_R_WhereOr      = "( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Oo][Rr][ ]+";
     
     /** 替换 WHERE Order */
-    private final static String              $SQL_R_WhereOrder   = "^( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Oo][Rr][Dd][Ee][Rr][ ]+";
+    private final static String              $SQL_R_WhereOrder   = "( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Oo][Rr][Dd][Ee][Rr][ ]+";
     
     /** 替换 WHERE Group */
-    private final static String              $SQL_R_WhereGroup   = "^( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Gg][Rr][Oo][Uu][Pp][ ]+";
+    private final static String              $SQL_R_WhereGroup   = "( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Gg][Rr][Oo][Uu][Pp][ ]+";
     
     /** 替换 WHERE Limit */
-    private final static String              $SQL_R_WhereLimit   = "^( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Ll][Ii][Mm][Ii][Tt][ ]+";
+    private final static String              $SQL_R_WhereLimit   = "( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Ll][Ii][Mm][Ii][Tt][ ]+";
     
     
     
@@ -541,7 +544,14 @@ public class DBSQL implements Serializable
         
         v_Pattern = Pattern.compile($SQL_R_WhereDynamic);
         v_Matcher = v_Pattern.matcher(this.sqlText);
+        if ( v_Matcher.find() )
+        {
+            this.haveWhereDynamic = true;
+            return;
+        }
         
+        v_Pattern = Pattern.compile($SQL_R_WherePlaceho);
+        v_Matcher = v_Pattern.matcher(this.sqlText);
         if ( v_Matcher.find() )
         {
             this.haveWhereDynamic = true;
@@ -605,9 +615,14 @@ public class DBSQL implements Serializable
             return i_SQL;
         }
         
-        String  v_SQL     = i_SQL;
+        String  v_SQL     = i_SQL.trim();
         Pattern v_Pattern = null;
         Matcher v_Matcher = null;
+        
+        if ( v_SQL.toUpperCase().endsWith(" WHERE") )
+        {
+            v_SQL = v_SQL.substring(0 ,v_SQL.length() - 6);
+        }
         
         v_Pattern = Pattern.compile($SQL_R_WhereAnd);
         v_Matcher = v_Pattern.matcher(v_SQL);
@@ -790,6 +805,16 @@ public class DBSQL implements Serializable
     
     
     
+    /**
+     * 获取：是否有WHERE条件后直接跟动态SQL的情况，如 WHERE <[ ... ]>
+     */
+    public boolean isHaveWhereDynamic()
+    {
+        return haveWhereDynamic;
+    }
+
+
+
     /**
      * 填充或设置占位符SQL
      * 
