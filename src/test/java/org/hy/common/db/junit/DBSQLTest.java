@@ -182,7 +182,7 @@ public class DBSQLTest
         v_Values.put("PartEnd"   ,"121101");
         v_Values.put("BeginTime" ,new Date());
         v_Values.put("EndTime"   ,new Date());
-        v_Values.put("CallerNo"  ,"19909218550");
+        v_Values.put("CallerNo"  ,"199");
         //v_Values.put("ContactID" ,"201210310001");
         
         $Logger.info(v_DBSQL.getSQL(v_Values ,null));

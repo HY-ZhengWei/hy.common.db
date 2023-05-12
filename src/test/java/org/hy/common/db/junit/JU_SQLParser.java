@@ -118,7 +118,7 @@ public class JU_SQLParser
         
         if ( v_MatcheEndIndex > 0 && v_MatcheEndIndex < v_SQLText.length() )
         {
-            // $Logger.info(v_SQLText.substring(v_MatcheEndIndex));
+            $Logger.info(v_SQLText.substring(v_MatcheEndIndex));
         }
         
         if ( v_MatcheEndIndex > 0 )

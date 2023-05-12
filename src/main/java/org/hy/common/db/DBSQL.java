@@ -1426,10 +1426,10 @@ public class DBSQL implements Serializable
                                             throw new DBSQLSafeException(this.getSqlText());
                                         }
                                     }
-                                    else
-                                    {
+                                    // else
+                                    // {
                                         // 因为没有执行参数，所以不做任何替换  2019-03-13
-                                    }
+                                    // }
                                 }
                                 
                                 if ( v_IsReplace )
@@ -1450,10 +1450,10 @@ public class DBSQL implements Serializable
                                 }
                             }
                         }
-                        else
-                        {
+                        // else
+                        // {
                             // 因为没有执行参数，所以不做任何替换  2019-03-13
-                        }
+                        // }
                     }
                     catch (DBSQLSafeException exce)
                     {

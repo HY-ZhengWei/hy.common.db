@@ -1,6 +1,7 @@
 package org.hy.common.db.junit;
 
 import org.hy.common.db.DBConfig;
+import org.hy.common.xml.log.Logger;
 
 
 
@@ -14,6 +15,10 @@ import org.hy.common.db.DBConfig;
  */
 public class DBConfigTest
 {
+    
+    private static final Logger $Logger = new Logger(DBConfigTest.class ,true);
+    
+    
 
     public static void main(String[] args)
     {
@@ -28,7 +33,7 @@ public class DBConfigTest
         }
         catch (Exception e)
         {
-            e.printStackTrace();
+            $Logger.error(e);
             return;
         }
         

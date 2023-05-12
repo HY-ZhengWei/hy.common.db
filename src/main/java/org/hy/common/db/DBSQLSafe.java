@@ -86,7 +86,7 @@ public final class DBSQLSafe
         {
             if ( !isSafe_Relations(v_Value ,v_Relation) )
             {
-                System.err.println(sqlAttackLog(i_Value));
+                $Logger.error(sqlAttackLog(i_Value));
                 return false;
             }
         }

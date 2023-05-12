@@ -5,6 +5,8 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
+import org.hy.common.xml.log.Logger;
+
 
 
 
@@ -18,6 +20,11 @@ import java.sql.Statement;
  */
 public class DBOperation
 {
+    
+    private static final Logger $Logger = new Logger(DBOperation.class ,true);
+    
+    
+    
     private static DBOperation  DBOpr  = null;
     
     /** 数据库信息 */
@@ -112,7 +119,7 @@ public class DBOperation
         }
         catch (Exception err)
         {
-            err.printStackTrace();
+            $Logger.error(err);
         }
         finally
         {
@@ -130,7 +137,7 @@ public class DBOperation
         }
         catch (Exception err)
         {
-            err.printStackTrace();
+            $Logger.error(err);
         }
         finally
         {
@@ -170,7 +177,7 @@ public class DBOperation
         }
         catch (Exception err)
         {
-            err.printStackTrace();
+            $Logger.error(err);
         }
         finally
         {
@@ -396,7 +403,7 @@ public class DBOperation
         }
         catch (Exception err)
         {
-            err.printStackTrace();
+            $Logger.error(err);
         }
         finally
         {

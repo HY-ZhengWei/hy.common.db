@@ -287,7 +287,7 @@ public class ConfigFileObject extends ConfigFileReadBase
             return null;
         }
         
-        if ( i_Index < 0  || i_Index >= this.objectMap.size() )
+        if ( i_Index < 0  || i_Index >= this.objectNameList.size() )
         {
             return null;
         }
