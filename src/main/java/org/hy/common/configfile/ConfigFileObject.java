@@ -10,6 +10,7 @@ import java.util.Map;
 
 import org.hy.common.Help;
 import org.hy.common.StringHelp;
+import org.hy.common.xml.log.Logger;
 
 
 
@@ -36,6 +37,8 @@ import org.hy.common.StringHelp;
 public class ConfigFileObject extends ConfigFileReadBase
 {
 
+    private static final Logger $Logger = new Logger(ConfigFileObject.class ,true);
+    
     /**
      * 配置文件存放格式为：name.key=value
      * 
@@ -111,7 +114,7 @@ public class ConfigFileObject extends ConfigFileReadBase
             
             if ( v_NameAndKey.length != 2 )
             {
-                System.out.println(ConfigFile_I18N.getHintRigthOSConfig() + i_LineNo + " = " + i_LineString);
+                $Logger.info(ConfigFile_I18N.getHintRigthOSConfig() + i_LineNo + " = " + i_LineString);
                 this.setStopRead(true);
             }
             
@@ -163,10 +166,10 @@ public class ConfigFileObject extends ConfigFileReadBase
                     v_CFORMap.put(v_CFORowInfo.getKey() ,v_CFORowInfo);
                     this.objRowInfoMap.put(v_CFORowInfo.getName() ,v_CFORMap);
                 }
-                catch (Exception e)
+                catch (Exception exce)
                 {
                     this.setStopRead(true);
-                    e.printStackTrace();
+                    $Logger.error(exce);
                 }
             }
             
@@ -193,7 +196,7 @@ public class ConfigFileObject extends ConfigFileReadBase
                 }
                 catch (Exception exce)
                 {
-                    exce.printStackTrace();
+                    $Logger.error(exce);
                 }
             }
             

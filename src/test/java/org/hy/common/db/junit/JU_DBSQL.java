@@ -6,6 +6,7 @@ import org.hy.common.Date;
 import org.hy.common.Help;
 import org.hy.common.db.DBPreparedSQL;
 import org.hy.common.db.DBSQL;
+import org.hy.common.xml.log.Logger;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -14,9 +15,12 @@ import org.junit.runners.MethodSorters;
 
 
 
-@FixMethodOrder(MethodSorters.NAME_ASCENDING) 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class JU_DBSQL
 {
+    private static final Logger $Logger = new Logger(JU_DBSQL.class ,true);
+    
+    
     
     private String    id;
     
@@ -65,11 +69,11 @@ public class JU_DBSQL
         String v_SQL = "UPDATE HY SET Name = ':inner.beginTime' WHERE ID = ':id'";
         DBSQL v_DBSQL = new DBSQL(v_SQL);
         
-        System.out.println(v_DBSQL.getSQL(v_Data ,null));
-        System.out.println(v_DBSQL.getSQL(Help.toMap(v_Data) ,null));
+        $Logger.info(v_DBSQL.getSQL(v_Data ,null));
+        $Logger.info(v_DBSQL.getSQL(Help.toMap(v_Data) ,null));
         
         DBPreparedSQL v_PreparedSQL = v_DBSQL.getPreparedSQL();
-        System.out.println(v_PreparedSQL.getSQL());
+        $Logger.info(v_PreparedSQL.getSQL());
         Help.print(v_PreparedSQL.getPlaceholders());
     }
     
@@ -88,11 +92,11 @@ public class JU_DBSQL
         String v_SQL = "UPDATE HY SET Name = ':inner.beginTime' WHERE ID = ':id' AND Name = ':inner.userName' AND Name = '<[:inner.userName]>01' AND Name = '<[:inner.userName]>02'";
         DBSQL v_DBSQL = new DBSQL(v_SQL);
         
-        System.out.println(v_DBSQL.getSQL(v_Data ,null));
-        System.out.println(v_DBSQL.getSQL(Help.toMap(v_Data) ,null));
+        $Logger.info(v_DBSQL.getSQL(v_Data ,null));
+        $Logger.info(v_DBSQL.getSQL(Help.toMap(v_Data) ,null));
         
         DBPreparedSQL v_PreparedSQL = v_DBSQL.getPreparedSQL();
-        System.out.println(v_PreparedSQL.getSQL());
+        $Logger.info(v_PreparedSQL.getSQL());
         Help.print(v_PreparedSQL.getPlaceholders());
     }
     

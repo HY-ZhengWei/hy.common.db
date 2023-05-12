@@ -2,50 +2,50 @@
 
 <config>
 
-	<import name="sqls"            class="java.util.ArrayList" />
-	<import name="dataSource"      class="org.hy.common.db.DataSourceNoPool" />
-	<import name="dataSourceGroup" class="org.hy.common.db.DataSourceGroup" />
-	<import name="sql"             class="org.hy.common.xml.XSQL" />
+    <import name="sqls"            class="java.util.ArrayList" />
+    <import name="dataSource"      class="org.hy.common.db.DataSourceNoPool" />
+    <import name="dataSourceGroup" class="org.hy.common.db.DataSourceGroup" />
+    <import name="sql"             class="org.hy.common.xml.XSQL" />
 
-	
+    
 
-	<!-- 数据库配置信息 -->
-	<sqls>
-	
-		<!-- SQLite数据库 -->
-		<dataSource id="DS_SQLite">
-			<driverClass>org.sqlite.JDBC</driverClass>
-			<jdbcUrl>jdbc:sqlite:classhome:../SQLiteDB.sqe</jdbcUrl>
-			<user />
-			<password />
-		</dataSource>
-		
-		
-		
-		<!-- SQLite数据库连接池组 -->
-		<dataSourceGroup id="DSG_SQLite">
-			<call name="add">
-				<dataSource ref="DS_SQLite" />
-			</call>
-		</dataSourceGroup>
-		
-				
-		
-		<sql id="XSQL_SQLite"> 
-		
-			<dataSourceGroup ref="DSG_SQLite" />
-			
-			<content>
-				<![CDATA[
-					SELECT  name AS TableName
-					  FROM  SQLite_Master
+    <!-- 数据库配置信息 -->
+    <sqls>
+    
+        <!-- SQLite数据库 -->
+        <dataSource id="DS_SQLite">
+            <driverClass>org.sqlite.JDBC</driverClass>
+            <jdbcUrl>jdbc:sqlite:classhome:../SQLiteDB.sqe</jdbcUrl>
+            <user />
+            <password />
+        </dataSource>
+        
+        
+        
+        <!-- SQLite数据库连接池组 -->
+        <dataSourceGroup id="DSG_SQLite">
+            <call name="add">
+                <dataSource ref="DS_SQLite" />
+            </call>
+        </dataSourceGroup>
+        
+                
+        
+        <sql id="XSQL_SQLite"> 
+        
+            <dataSourceGroup ref="DSG_SQLite" />
+            
+            <content>
+                <![CDATA[
+                    SELECT  name AS TableName
+                      FROM  SQLite_Master
                      WHERE  type='table'
                      ORDER  BY name
-				]]>
-			</content>
-			
-		</sql>
-		
-	</sqls>
-	
+                ]]>
+            </content>
+            
+        </sql>
+        
+    </sqls>
+    
 </config>

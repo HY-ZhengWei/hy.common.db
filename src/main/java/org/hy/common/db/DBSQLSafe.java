@@ -4,6 +4,7 @@ import java.util.regex.Pattern;
 
 import org.hy.common.Date;
 import org.hy.common.StringHelp;
+import org.hy.common.xml.log.Logger;
 
 import com.greenpineyu.fel.FelEngine;
 import com.greenpineyu.fel.FelEngineImpl;
@@ -25,6 +26,7 @@ import com.greenpineyu.fel.FelEngineImpl;
  */
 public final class DBSQLSafe
 {
+    private static final Logger      $Logger       = new Logger(DBSQLSafe.class ,true);
     
     private static final String      $Comment      = "--";
     
@@ -98,7 +100,7 @@ public final class DBSQLSafe
                 
                 if ( v_CheckRet )
                 {
-                    System.err.println(sqlAttackLog(i_Value));
+                    $Logger.error(sqlAttackLog(i_Value));
                     return false;
                 }
             }

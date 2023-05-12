@@ -1,6 +1,6 @@
 package org.hy.common.db.junit;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -8,6 +8,7 @@ import java.util.Map;
 import org.hy.common.Help;
 import org.hy.common.db.DBCondition;
 import org.hy.common.db.DBSQL;
+import org.hy.common.xml.log.Logger;
 import org.junit.Test;
 
 
@@ -23,6 +24,9 @@ import org.junit.Test;
  */
 public class JU_DBSQL_Condition
 {
+    private static final Logger $Logger = new Logger(JU_DBSQL_Condition.class ,true);
+    
+    
     
     public DBSQL createDBSQL()
     {
@@ -39,7 +43,7 @@ public class JU_DBSQL_Condition
     
     
     /**
-     * 条件满足测试 
+     * 条件满足测试
      * 
      * @author      ZhengWei(HY)
      * @createDate  2018-08-10
@@ -59,12 +63,12 @@ public class JU_DBSQL_Condition
         
         String v_SQL = v_DBSQL.getSQL(v_Params ,null);
         
-        System.out.println("查询参数条件：");
+        $Logger.info("查询参数条件：");
         Help.print(v_Params);
-        System.out.println("占位符取值条件：");
+        $Logger.info("占位符取值条件：");
         Help.print(v_DBSQL.getConditions());
-        System.out.println("SQL模板：" + v_DBSQL.getSqlText());
-        System.out.println("运行SQL：" + v_SQL);
+        $Logger.info("SQL模板：" + v_DBSQL.getSqlText());
+        $Logger.info("运行SQL：" + v_SQL);
         
         assertTrue(v_SQL.indexOf("ZhengWei") >= 0 && v_SQL.indexOf("100") >= 0);
     }
@@ -72,7 +76,7 @@ public class JU_DBSQL_Condition
     
     
     /**
-     * 条件不满足时的NULL测试 
+     * 条件不满足时的NULL测试
      * 
      * @author      ZhengWei(HY)
      * @createDate  2018-08-10
@@ -92,12 +96,12 @@ public class JU_DBSQL_Condition
         
         String v_SQL = v_DBSQL.getSQL(v_Params ,null);
         
-        System.out.println("查询参数条件：");
+        $Logger.info("查询参数条件：");
         Help.print(v_Params);
-        System.out.println("占位符取值条件：");
+        $Logger.info("占位符取值条件：");
         Help.print(v_DBSQL.getConditions());
-        System.out.println("SQL模板：" + v_DBSQL.getSqlText());
-        System.out.println("运行SQL：" + v_SQL);
+        $Logger.info("SQL模板：" + v_DBSQL.getSqlText());
+        $Logger.info("运行SQL：" + v_SQL);
         
         assertTrue(v_SQL.indexOf("NULL") >= 0 && v_SQL.indexOf("17") >= 0);
     }

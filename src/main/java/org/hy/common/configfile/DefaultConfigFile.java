@@ -67,7 +67,7 @@ public class DefaultConfigFile extends ConfigFileReadBase
     }
     
     
-    public Map<? ,?> getContent()
+    public Map<String ,String> getContent()
     {
         return this.content;
     }

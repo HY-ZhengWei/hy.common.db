@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 
 import org.hy.common.Help;
 import org.hy.common.MethodReflect;
+import org.hy.common.xml.log.Logger;
 
 
 
@@ -51,6 +52,9 @@ import org.hy.common.MethodReflect;
 @Deprecated
 public class DBSQL_V1
 {
+    private static final Logger $Logger = new Logger(DBSQL_V1.class ,true);
+    
+    
     public final static int   $DBSQL_TYPE_UNKNOWN   = -1;
     
     public final static int   $DBSQL_TYPE_SELECT    = 1;
@@ -136,8 +140,6 @@ public class DBSQL_V1
             int    v_EndIndex   = v_Matcher.end()   - 1;
             String v_MetcheStr  = this.sqlText.substring(v_StartIndex ,v_EndIndex);
             String v_SQLSplit   = this.sqlText.substring(v_MatcheEndIndex ,v_Matcher.end() - v_Matcher.group().length() + 1);
-            
-            //System.out.println("Match [" + v_MetcheStr + "] at positions " + v_StartIndex + "-" + v_EndIndex);
             
             this.put(new DBSQL_Split_V1(v_SQLIndex ,v_SQLSplit ,v_MetcheStr.substring(1) ,v_StartIndex ,v_EndIndex));
             
@@ -296,9 +298,8 @@ public class DBSQL_V1
         
         StringBuilder            v_SQL      = new StringBuilder();
         Iterator<DBSQL_Split_V1> v_Ierator  = this.sqlSplitList.iterator();
-        boolean               v_UpIsExist   = false;         // 上一个输入性参数是否存在，并有效
-        boolean               v_UpUpIsExist = false;         // 上上一个输入性参数是否存在，并有效
-        int                   v_SQLIndex    = 0;
+        boolean                  v_UpIsExist   = false;         // 上一个输入性参数是否存在，并有效
+        int                      v_SQLIndex    = 0;
         
         
         while ( v_Ierator.hasNext() )
@@ -340,7 +341,7 @@ public class DBSQL_V1
                 }
                 catch (Exception e)
                 {
-                    e.printStackTrace();
+                    $Logger.error(e);
                 }
             }
             // 没有匹配的 getter 方法
@@ -355,7 +356,7 @@ public class DBSQL_V1
             }
             
             
-            if ( v_UpUpIsExist && !v_UpIsExist )
+            if ( !v_UpIsExist )
             {
                 v_SQL.append(v_DBSQL_Split.getSqlSplit().substring(0 ,1));
             }
@@ -455,7 +456,7 @@ public class DBSQL_V1
                 }
                 catch (Exception e)
                 {
-                    e.printStackTrace();
+                    $Logger.error(e);
                 }
             }
             // 没有匹配的 getter 方法

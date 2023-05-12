@@ -8,6 +8,7 @@ import org.hy.common.Help;
 import org.hy.common.MethodReflect;
 import org.hy.common.PartitionMap;
 import org.hy.common.StringHelp;
+import org.hy.common.xml.log.Logger;
 
 import com.greenpineyu.fel.FelEngine;
 import com.greenpineyu.fel.FelEngineImpl;
@@ -42,14 +43,15 @@ import com.greenpineyu.fel.context.MapContext;
  */
 public class DBCondition implements Serializable
 {
-
-   private static final long serialVersionUID = -6750777160123642579L;
+    private static final long serialVersionUID = -6750777160123642579L;
+    
+    private static final Logger $Logger            = new Logger(DBCondition.class ,true);
     
     /** 条件满足时，真值的默认值。表示取占位符对应的值 */
-    public static final String $DefautlTrueValue  = "THIS";
+    public static  final String $DefautlTrueValue  = "THIS";
     
     /** 条件不满足时，假值的默认值。表示空指针，当位于动态标识 <[ ... ]>之内时，此动态标识内的SQL段将不参与整个SQL的执行 */
-    public static final String $DefaultFalseValue = "NULL";
+    public static  final String $DefaultFalseValue = "NULL";
     
     /**
      * 表达式引擎的阻断符或是限定符。
@@ -179,7 +181,7 @@ public class DBCondition implements Serializable
         }
         catch (Exception exce)
         {
-            exce.printStackTrace();
+            $Logger.error(exce);
         }
         
         return null;
@@ -214,7 +216,7 @@ public class DBCondition implements Serializable
         }
         catch (Exception exce)
         {
-            exce.printStackTrace();
+            $Logger.error(exce);
         }
         
         return null;
@@ -271,7 +273,7 @@ public class DBCondition implements Serializable
         }
         catch (Exception exce)
         {
-            exce.printStackTrace();
+            $Logger.error(exce);
         }
         
         return null;
@@ -312,7 +314,7 @@ public class DBCondition implements Serializable
         }
         catch (Exception exce)
         {
-            exce.printStackTrace();
+            $Logger.error(exce);
         }
         
         return null;

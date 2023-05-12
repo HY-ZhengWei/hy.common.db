@@ -139,15 +139,6 @@ public class DBOperation
     }
 
 
-    /**
-     * 析构子
-     */
-    @Override
-    protected void finalize()
-    {
-        
-    }
-
     
     /**
     * 执行无返回记录集的所有数据库操作(可进行批次的操作)。

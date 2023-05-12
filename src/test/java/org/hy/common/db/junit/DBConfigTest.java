@@ -12,27 +12,27 @@ import org.hy.common.db.DBConfig;
  * @author   ZhengWei(HY)
  * @version  V1.0  2012-10-29
  */
-public class DBConfigTest 
+public class DBConfigTest
 {
 
-	public static void main(String[] args) 
-	{
-		String   v_DBConfigFileName = DBConfig.class.getResource(DBConfig.DBCONFIGFILE).getPath();
-		
-		DBConfig v_DBConfig         = new DBConfig(v_DBConfigFileName);
-		
-		try 
-		{
-			v_DBConfig.setEnableSecurity(true);
-			v_DBConfig.read();
-		} 
-		catch (Exception e) 
-		{
-			e.printStackTrace();
-			return;
-		}
-		
-		v_DBConfig = null;
-	}
+    public static void main(String[] args)
+    {
+        String   v_DBConfigFileName = DBConfig.class.getResource(DBConfig.DBCONFIGFILE).getPath();
+        
+        DBConfig v_DBConfig         = new DBConfig(v_DBConfigFileName);
+        
+        try
+        {
+            v_DBConfig.setEnableSecurity(true);
+            v_DBConfig.read();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            return;
+        }
+        
+        v_DBConfig = null;
+    }
 
 }

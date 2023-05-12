@@ -13,6 +13,7 @@ import org.hy.common.Execute;
 import org.hy.common.Help;
 import org.hy.common.StringHelp;
 import org.hy.common.XJavaID;
+import org.hy.common.xml.log.Logger;
 
 
 
@@ -39,20 +40,22 @@ import org.hy.common.XJavaID;
 public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJavaID ,Serializable
 {
     private static final long serialVersionUID = -1707674417006083407L;
+    
+    private static final Logger $Logger            = new Logger(DataSourceGroup.class ,true);
 
-    public static final String $DBType_Oracle     = "ORACLE";
-    
-    public static final String $DBType_MySQL      = "MYSQL";
-    
-    public static final String $DBType_MariaDB    = "MARIADB";
-    
-    public static final String $DBType_SQLServer  = "SQLSERVER";
-    
-    public static final String $DBType_DB2        = "DB2";
-    
-    public static final String $DBType_SQLite     = "SQLITE";
-    
-    public static final String $DBType_PostgreSQL = "POSTGRESQL";
+    public static  final String $DBType_Oracle     = "ORACLE";
+                   
+    public static  final String $DBType_MySQL      = "MYSQL";
+                   
+    public static  final String $DBType_MariaDB    = "MARIADB";
+                   
+    public static  final String $DBType_SQLServer  = "SQLSERVER";
+                   
+    public static  final String $DBType_DB2        = "DB2";
+                   
+    public static  final String $DBType_SQLite     = "SQLITE";
+                   
+    public static  final String $DBType_PostgreSQL = "POSTGRESQL";
     
     
     
@@ -181,15 +184,15 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
             }
             catch (Exception exce)
             {
-                exce.printStackTrace();
                 this.isException = true;
-                System.err.println("\n" + Date.getNowTime().getFull() + " 编号：" + this.validDSIndex + " 的数据库连接池" + Help.NVL(this.getXJavaID()) + "失效。尝试获取下一个数据库连接池中的连接。");
+                $Logger.error(exce);
+                $Logger.error(Date.getNowTime().getFull() + " 编号：" + this.validDSIndex + " 的数据库连接池" + Help.NVL(this.getXJavaID()) + "失效。尝试获取下一个数据库连接池中的连接。");
             }
         }
         
         if ( !this.isRunReConn )
         {
-            System.err.println("\n" + Date.getNowTime().getFull() + " 所有的数据库连接池" + Help.NVL(this.getXJavaID()) + "失效，系统将等待 10秒后尝试重新连接。");
+            $Logger.error(Date.getNowTime().getFull() + " 所有的数据库连接池" + Help.NVL(this.getXJavaID()) + "失效，系统将等待 10秒后尝试重新连接。");
             
             this.isRunReConn  = true;  // 防止重复执行
             this.validDSIndex = Integer.MAX_VALUE;
@@ -213,7 +216,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
      */
     public synchronized void allowReconnection()
     {
-        System.out.println("\n" + Date.getNowTime().getFull() + " 数据库连接池组" + Help.NVL(this.getXJavaID()) + "编号从0重新遍历，尝试重新连接。");
+        $Logger.error(Date.getNowTime().getFull() + " 数据库连接池组" + Help.NVL(this.getXJavaID()) + "编号从0重新遍历，尝试重新连接。");
         
         this.validDSIndex = 0;
         this.isRunReConn  = false;
@@ -285,7 +288,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
         }
         catch (Exception exce)
         {
-            exce.printStackTrace();
+            $Logger.error(exce);
         }
         finally
         {
@@ -458,7 +461,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
                                 }
                                 catch (Exception exce)
                                 {
-                                    exce.printStackTrace();
+                                    $Logger.error(exce);
                                 }
                             }
                         }
@@ -483,7 +486,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
                     }
                     catch (Exception exce)
                     {
-                        exce.printStackTrace();
+                        $Logger.error(exce);
                     }
                     finally
                     {

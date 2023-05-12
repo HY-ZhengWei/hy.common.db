@@ -17,6 +17,7 @@ import org.hy.common.PartitionMap;
 import org.hy.common.SplitSegment;
 import org.hy.common.SplitSegment.InfoType;
 import org.hy.common.StringHelp;
+import org.hy.common.xml.log.Logger;
 
 
 
@@ -112,6 +113,7 @@ public class DBSQL implements Serializable
     
     private static final long serialVersionUID = 6969242576876292691L;
     
+    private static final Logger              $Logger             = new Logger(DBSQL.class ,true);
     
     /** 占位符是什么字符 */
     public       static String               $Placeholder        = ":";
@@ -810,7 +812,7 @@ public class DBSQL implements Serializable
                     }
                     catch (Exception exce)
                     {
-                        exce.printStackTrace();
+                        $Logger.error(exce);
                         throw new RuntimeException(exce.getMessage());
                     }
                     
@@ -929,7 +931,7 @@ public class DBSQL implements Serializable
                     }
                     catch (Exception exce)
                     {
-                        exce.printStackTrace();
+                        $Logger.error(exce);
                     }
                     
                     if ( v_MethodReflect != null )
@@ -1208,7 +1210,7 @@ public class DBSQL implements Serializable
                     }
                     catch (Exception exce)
                     {
-                        exce.printStackTrace();
+                        $Logger.error(exce);
                     }
                 }
                 
@@ -1397,13 +1399,8 @@ public class DBSQL implements Serializable
                     
                     try
                     {
-                        Object v_MapValue = null;
-                        
                         // 全局占位符 ZhengWei(HY) Add 2019-03-06
-                        if ( v_MapValue == null )
-                        {
-                            v_MapValue = Help.getValueIgnoreCase(DBSQLStaticParams.getInstance() ,v_PlaceHolder);
-                        }
+                        Object v_MapValue = Help.getValueIgnoreCase(DBSQLStaticParams.getInstance() ,v_PlaceHolder);
                         
                         if ( v_MapValue != null )
                         {
@@ -1464,7 +1461,7 @@ public class DBSQL implements Serializable
                     }
                     catch (Exception exce)
                     {
-                        exce.printStackTrace();
+                        $Logger.error(exce);
                     }
                 }
                 
