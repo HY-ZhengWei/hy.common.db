@@ -66,7 +66,7 @@ public class DatabaseInfo
      */
     public DatabaseInfo()
     {
-        this.configID  = this.getSerialNo() + "_" + new Date().getFull();
+        this.configID  = getSerialNo() + "_" + new Date().getFull();
     }
     
     

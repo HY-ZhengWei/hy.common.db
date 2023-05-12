@@ -107,6 +107,7 @@ import org.hy.common.xml.log.Logger;
  *              v19.0 2023-05-11  1. 优化：正则表达式常量化
  *                                2. 添加：识别 Merge、Truncate、Create、Kill等语法类型
  *                                3. 添加：识别 Delete语法中的表名称
+ *                                4. 添加：动态<[...]>SQL的解释，无须写成 WHERE 1 = 1 的固定形式。
  */
 public class DBSQL implements Serializable
 {
@@ -180,6 +181,26 @@ public class DBSQL implements Serializable
     
     
     
+    /** 匹配 WHERE <[ */
+    private final static String              $SQL_R_WhereDynamic = "^( )*[Ww][Hh][Ee][Rr][Ee][ ]+<\\[";
+    
+    /** 替换 WHERE AND */
+    private final static String              $SQL_R_WhereAnd     = "^( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Aa][Nn][Dd][ ]+";
+    
+    /** 替换 WHERE OR */
+    private final static String              $SQL_R_WhereOr      = "^( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Oo][Rr][ ]+";
+    
+    /** 替换 WHERE Order */
+    private final static String              $SQL_R_WhereOrder   = "^( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Oo][Rr][Dd][Ee][Rr][ ]+";
+    
+    /** 替换 WHERE Group */
+    private final static String              $SQL_R_WhereGroup   = "^( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Gg][Rr][Oo][Uu][Pp][ ]+";
+    
+    /** 替换 WHERE Limit */
+    private final static String              $SQL_R_WhereLimit   = "^( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Ll][Ii][Mm][Ii][Tt][ ]+";
+    
+    
+    
     /** 数据库中的NULL关键字 */
     private final static String              $NULL               = "NULL";
                                                                  
@@ -234,6 +255,9 @@ public class DBSQL implements Serializable
     
     private DBSQLFill                 dbSQLFill;
     
+    /** 是否有WHERE条件后直接跟动态SQL的情况，如 WHERE <[ ... ]> */
+    private boolean                   haveWhereDynamic;
+    
     /** 通过分析后的分段SQL信息 */
     private List<DBSQL_Split>         segments;
     
@@ -265,14 +289,15 @@ public class DBSQL implements Serializable
      */
     public DBSQL()
     {
-        this.sqlText      = "";
-        this.sqlType      = $DBSQL_TYPE_UNKNOWN;
-        this.sqlTableName = null;
-        this.segments     = new ArrayList<DBSQL_Split>();
-        this.preparedSQL  = new DBPreparedSQL();
-        this.safeCheck    = true;
-        this.conditions   = new HashMap<String ,DBConditions>();
-        this.defaultNull  = false;
+        this.sqlText          = "";
+        this.sqlType          = $DBSQL_TYPE_UNKNOWN;
+        this.sqlTableName     = null;
+        this.haveWhereDynamic = false;
+        this.segments         = new ArrayList<DBSQL_Split>();
+        this.preparedSQL      = new DBPreparedSQL();
+        this.safeCheck        = true;
+        this.conditions       = new HashMap<String ,DBConditions>();
+        this.defaultNull      = false;
         this.setNotPlaceholders("MI,SS,mi,ss");
         this.setKeyReplace(true);
     }
@@ -306,6 +331,7 @@ public class DBSQL implements Serializable
         }
         
         this.parser_SQLType();
+        this.parser_WhereDynamic();
         
         // 匹配 <[ ... ]> 的字符串
         List<SplitSegment> v_Segments = StringHelp.Split($SQL_Find_Dynamic ,this.sqlText);
@@ -333,15 +359,8 @@ public class DBSQL implements Serializable
      */
     private void parser_SQLType()
     {
-        if ( Help.isNull(this.sqlText) )
-        {
-            return;
-        }
-        
-        
         Pattern v_Pattern = null;
         Matcher v_Matcher = null;
-        
         
         v_Pattern = Pattern.compile($SQL_Find_Select);
         v_Matcher = v_Pattern.matcher(this.sqlText);
@@ -503,6 +522,131 @@ public class DBSQL implements Serializable
                 return;
             }
         }
+    }
+    
+    
+    
+    /**
+     * 是否有WHERE条件后直接跟动态SQL的情况，如 WHERE <[ ... ]>
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2023-05-12
+     * @version     v1.0
+     *
+     */
+    private void parser_WhereDynamic()
+    {
+        Pattern v_Pattern = null;
+        Matcher v_Matcher = null;
+        
+        v_Pattern = Pattern.compile($SQL_R_WhereDynamic);
+        v_Matcher = v_Pattern.matcher(this.sqlText);
+        
+        if ( v_Matcher.find() )
+        {
+            this.haveWhereDynamic = true;
+        }
+    }
+    
+    
+    
+    /**
+     * 当有WHERE条件后直接跟动态SQL的情况进行处理。
+     * 支持如下场景的动态SQL的解释，同时无须写成 WHERE 1 = 1 的固定形式。
+     * 
+     *    场景01： SELECT  *
+     *              FROM  表名
+     *             WHERE
+     *          <[   AND  字段A = ':占位符A'  ]>
+     *          <[   AND  字段B = ':占位符B'  ]>
+     * 
+     * 
+     *    场景02： SELECT  *
+     *              FROM  表名
+     *             WHERE
+     *          <[        字段A = ':占位符A'  ]>
+     *          <[    OR  字段B = ':占位符B'  ]>
+     * 
+     * 
+     *    场景03： SELECT  COUNT(1)
+     *              FROM  表名
+     *             WHERE
+     *          <[   AND  字段A = ':占位符A'  ]>
+     *          <[   AND  字段B = ':占位符B'  ]>
+     *             GROUP  BY 字段C
+     * 
+     * 
+     *    场景04： SELECT  *
+     *              FROM  表名
+     *             WHERE
+     *          <[   AND  字段A = ':占位符A'  ]>
+     *          <[   AND  字段B = ':占位符B'  ]>
+     *             ORDER  BY 字段C
+     * 
+     * 
+     *    场景05： SELECT  *
+     *              FROM  表名
+     *             WHERE
+     *          <[   AND  字段A = ':占位符A'  ]>
+     *          <[   AND  字段B = ':占位符B'  ]>
+     *             LIMIT  1 ,10
+     *
+     * @author      ZhengWei(HY)
+     * @createDate  2023-05-12
+     * @version     v1.0
+     *
+     * @param i_SQL
+     * @return
+     */
+    private String whereDynamic(String i_SQL)
+    {
+        if ( !this.haveWhereDynamic )
+        {
+            return i_SQL;
+        }
+        
+        String  v_SQL     = i_SQL;
+        Pattern v_Pattern = null;
+        Matcher v_Matcher = null;
+        
+        v_Pattern = Pattern.compile($SQL_R_WhereAnd);
+        v_Matcher = v_Pattern.matcher(v_SQL);
+        if ( v_Matcher.find() )
+        {
+            v_SQL = v_Matcher.replaceAll(" WHERE ");
+        }
+        
+        
+        v_Pattern = Pattern.compile($SQL_R_WhereOr);
+        v_Matcher = v_Pattern.matcher(v_SQL);
+        if ( v_Matcher.find() )
+        {
+            v_SQL = v_Matcher.replaceAll(" WHERE ");
+        }
+        
+        
+        v_Pattern = Pattern.compile($SQL_R_WhereGroup);
+        v_Matcher = v_Pattern.matcher(v_SQL);
+        if ( v_Matcher.find() )
+        {
+            v_SQL = v_Matcher.replaceAll(" GROUP ");
+        }
+        
+        v_Pattern = Pattern.compile($SQL_R_WhereOrder);
+        v_Matcher = v_Pattern.matcher(v_SQL);
+        if ( v_Matcher.find() )
+        {
+            v_SQL = v_Matcher.replaceAll(" ORDER ");
+        }
+        
+        v_Pattern = Pattern.compile($SQL_R_WhereLimit);
+        v_Matcher = v_Pattern.matcher(v_SQL);
+        if ( v_Matcher.find() )
+        {
+            v_SQL = v_Matcher.replaceAll(" LIMIT ");
+        }
+        
+        return v_SQL;
     }
     
     
@@ -954,6 +1098,7 @@ public class DBSQL implements Serializable
         
         // 2018-03-22  优化：完善安全检查防止SQL注入，将'--形式的SQL放在整体SQL来判定。
         String v_SQLRet = v_SQL.toString();
+        v_SQLRet = whereDynamic(v_SQLRet);
         if ( DBSQLSafe.isSafe_SQLComment(v_SQLRet) )
         {
             return v_SQLRet;
@@ -1227,6 +1372,7 @@ public class DBSQL implements Serializable
         
         // 2018-03-22  优化：完善安全检查防止SQL注入，将'--形式的SQL放在整体SQL来判定。
         String v_SQLRet = v_SQL.toString();
+        v_SQLRet = whereDynamic(v_SQLRet);
         if ( DBSQLSafe.isSafe_SQLComment(v_SQLRet) )
         {
             return v_SQLRet;
@@ -1331,6 +1477,7 @@ public class DBSQL implements Serializable
         }
         
         v_Ret.setSQL(v_SQL.toString());
+        v_Ret.setSQL(whereDynamic(v_Ret.getSQL()));
         return v_Ret;
     }
     
@@ -1478,6 +1625,7 @@ public class DBSQL implements Serializable
         
         // 2018-03-22  优化：完善安全检查防止SQL注入，将'--形式的SQL放在整体SQL来判定。
         String v_SQLRet = v_SQL.toString();
+        v_SQLRet = whereDynamic(v_SQLRet);
         if ( DBSQLSafe.isSafe_SQLComment(v_SQLRet) )
         {
             return v_SQLRet;
