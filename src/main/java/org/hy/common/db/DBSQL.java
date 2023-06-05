@@ -185,7 +185,7 @@ public class DBSQL implements Serializable
     private final static String              $SQL_R_WhereDynamic = "( )*[Ww][Hh][Ee][Rr][Ee][ ]+<\\[";
     
     /** 匹配 WHERE : */
-    private final static String              $SQL_R_WherePlaceho = "( )*[Ww][Hh][Ee][Rr][Ee][ ]+:";
+    private final static String              $SQL_R_WherePlaceho = "( )*[Ww][Hh][Ee][Rr][Ee][ ]+" + $Placeholder;
     
     /** 替换 WHERE AND */
     private final static String              $SQL_R_WhereAnd     = "( )*[Ww][Hh][Ee][Rr][Ee][ ]+[Aa][Nn][Dd][ ]+";
@@ -323,7 +323,6 @@ public class DBSQL implements Serializable
     /**
      * 分析SQL（私有）
      * 
-     * @param i_SQL
      * @return
      */
     private void parser()
@@ -2322,7 +2321,7 @@ class DBSQLFillDefault implements DBSQLFill ,Serializable
     {
         try
         {
-            return StringHelp.replaceAll(i_Info ,"':" + i_PlaceHolder + "'" ,i_Value);
+            return StringHelp.replaceAll(i_Info ,"'" + DBSQL.$Placeholder + i_PlaceHolder + "'" ,i_Value);
         }
         catch (Exception exce)
         {
@@ -2642,7 +2641,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
     @Override
     public String fillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
-        String v_PH = "':" + i_PlaceHolder + "'";
+        String v_PH = "'" + DBSQL.$Placeholder + i_PlaceHolder + "'";
         
         try
         {
@@ -2706,7 +2705,7 @@ class DBSQLFillKeyReplace implements DBSQLFill ,Serializable
     @Override
     public String onlyFillAllMark(String i_Info ,String i_PlaceHolder ,String i_Value ,String i_DBType)
     {
-        String v_PH = "':" + i_PlaceHolder + "'";
+        String v_PH = "'" + DBSQL.$Placeholder + i_PlaceHolder + "'";
         
         try
         {

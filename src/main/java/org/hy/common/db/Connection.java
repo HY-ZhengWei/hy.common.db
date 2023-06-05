@@ -40,7 +40,7 @@ public class Connection implements java.sql.Connection
     
     
     
-    public Connection(final java.sql.Connection i_Connection ,DataSourceGroup i_DataSourceGroup)
+    public Connection(final java.sql.Connection i_Connection ,final DataSourceGroup i_DataSourceGroup)
     {
         this.conn            = i_Connection;
         this.dataSourceGroup = i_DataSourceGroup;
