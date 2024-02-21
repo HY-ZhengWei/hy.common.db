@@ -74,7 +74,7 @@ public class DBOperation
             throw new java.lang.NullPointerException("Database info is null.");
         }
 
-        Class.forName(DATABASEINFO.getDriver()).newInstance();
+        Class.forName(DATABASEINFO.getDriver()).getDeclaredConstructor().newInstance();
         Connection v_Conn = DriverManager.getConnection(DATABASEINFO.getUrl() ,DATABASEINFO.getUser() ,DATABASEINFO.getPassword());
         
         return v_Conn;

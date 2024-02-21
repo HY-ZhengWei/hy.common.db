@@ -1,6 +1,6 @@
-Manifest-Version: 2.6.7
+Manifest-Version: 2.6.8
 Created-By: HY.ZhengWei@qq.com  2009
-Specification-Version: 2.6.7  2023-06-05
+Specification-Version: 2.6.8  2024-02-21
 SourceCode: https://github.com/HY-ZhengWei/hy.common.db
 SourceCodeChina: https://gitee.com/HY-ZhengWei/hy.common.db
-Build-JDK: OpenJDK 11
+Build-JDK: 17

@@ -67,7 +67,7 @@ public class DataSourceNoPool implements DataSource ,Serializable
         {
             try
             {
-                Class.forName(this.driverClass).newInstance();
+                Class.forName(this.driverClass).getDeclaredConstructor().newInstance();
                 this.isLoadingDriver = true;
             }
             catch (Exception exce)
@@ -173,7 +173,7 @@ public class DataSourceNoPool implements DataSource ,Serializable
     /**
      * 设置：数据库连接驱动
      * 
-     * @param driverClass 
+     * @param driverClass
      */
     public void setDriverClass(String driverClass)
     {
@@ -195,7 +195,7 @@ public class DataSourceNoPool implements DataSource ,Serializable
     /**
      * 设置：数据库连接具体数据库时的 url
      * 
-     * @param jdbcUrl 
+     * @param jdbcUrl
      */
     public void setJdbcUrl(String jdbcUrl)
     {
@@ -217,7 +217,7 @@ public class DataSourceNoPool implements DataSource ,Serializable
     /**
      * 设置：连接数据库用户名
      * 
-     * @param user 
+     * @param user
      */
     public void setUser(String user)
     {
@@ -239,7 +239,7 @@ public class DataSourceNoPool implements DataSource ,Serializable
     /**
      * 设置：连接数据库密码
      * 
-     * @param password 
+     * @param password
      */
     public void setPassword(String password)
     {

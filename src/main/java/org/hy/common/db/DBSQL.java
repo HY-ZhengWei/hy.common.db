@@ -108,6 +108,7 @@ import org.hy.common.xml.log.Logger;
  *                                2. 添加：识别 Merge、Truncate、Create、Kill等语法类型
  *                                3. 添加：识别 Delete语法中的表名称
  *                                4. 添加：动态<[...]>SQL的解释，无须写成 WHERE 1 = 1 的固定形式。
+ *              v20.0 2023-09-26  1. 修改：支持SQL Server数据库时间格式 HH:mm:ss 中的 :mm 防止被解释为占位符：发现人：王雨墨
  */
 public class DBSQL implements Serializable
 {
@@ -301,7 +302,7 @@ public class DBSQL implements Serializable
         this.safeCheck        = true;
         this.conditions       = new HashMap<String ,DBConditions>();
         this.defaultNull      = false;
-        this.setNotPlaceholders("MI,SS,mi,ss");
+        this.setNotPlaceholders("MI,SS,mi,ss,mm");
         this.setKeyReplace(true);
     }
     

@@ -155,7 +155,7 @@ public class ConfigFileObject extends ConfigFileReadBase
                     }
                     else
                     {
-                        v_Object = this.objectProtoType.newInstance();
+                        v_Object = this.objectProtoType.getDeclaredConstructor().newInstance();
                     }
                     
                     this.objectMap.put(v_CFORowInfo.getName(), v_Object);

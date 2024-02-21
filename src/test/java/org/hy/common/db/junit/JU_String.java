@@ -57,4 +57,14 @@ public class JU_String
         
         $Logger.info(v_SQL);
     }
+    
+    
+    
+    @Test
+    public void test_SubString()
+    {
+        String v_Phone = "19912345678";
+        System.out.println(v_Phone.substring(0 ,3) + "****" + v_Phone.substring(7));
+    }
+    
 }
