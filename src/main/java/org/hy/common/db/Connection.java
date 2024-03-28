@@ -71,12 +71,12 @@ public class Connection implements java.sql.Connection
     @Override
     public void close() throws SQLException
     {
-        this.conn.close();
-        
         if ( this.dataSourceGroup != null )
         {
             this.dataSourceGroup.connClosed();
         }
+        
+        this.conn.close();
     }
     
 
@@ -398,4 +398,5 @@ public class Connection implements java.sql.Connection
     {
         return this.conn.getNetworkTimeout();
     }
+
 }

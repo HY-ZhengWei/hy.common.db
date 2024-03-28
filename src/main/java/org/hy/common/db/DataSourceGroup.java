@@ -170,8 +170,12 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
             try
             {
                 java.sql.Connection v_OutsideConn = this.dataSources.get(this.validDSIndex).getConnection();
-                Connection          v_Conn        = new Connection(v_OutsideConn ,this);
+                if ( v_OutsideConn == null )
+                {
+                    continue;
+                }
                 
+                Connection v_Conn = new Connection(v_OutsideConn ,this);
                 this.connActiveCount++;
                 if ( this.connActiveCount > this.connMaxUseCount )
                 {
