@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
+import org.hy.common.Counter;
+
 
 
 
@@ -28,9 +30,15 @@ import java.util.concurrent.Executor;
  * @author      ZhengWei(HY)
  * @createDate  2017-07-13
  * @version     v1.0
+ *              v2.0  2024-03-29  添加：caller连接使用者的信息
  */
 public class Connection implements java.sql.Connection
 {
+    
+    /** 连接计数器。辅助分析连接使用情况Map.key为使用连接者的信息 */
+    public static final Counter<String> $ConnectionCounter = new Counter<String>();
+    
+    
     
     /** 所属的数据库连接池组 */
     private DataSourceGroup     dataSourceGroup;
@@ -38,12 +46,17 @@ public class Connection implements java.sql.Connection
     /** 第三方的连接对象实例 */
     private java.sql.Connection conn;
     
+    /** 连接使用者的信息 */
+    private String              caller;
     
     
-    public Connection(final java.sql.Connection i_Connection ,final DataSourceGroup i_DataSourceGroup)
+    
+    public Connection(String i_Caller ,final java.sql.Connection i_Connection ,final DataSourceGroup i_DataSourceGroup)
     {
         this.conn            = i_Connection;
         this.dataSourceGroup = i_DataSourceGroup;
+        this.caller          = i_Caller;
+        $ConnectionCounter.put(i_Caller);
     }
     
 
@@ -71,14 +84,27 @@ public class Connection implements java.sql.Connection
     @Override
     public void close() throws SQLException
     {
+        $ConnectionCounter.putMinus(this.caller);
+        
         if ( this.dataSourceGroup != null )
         {
             this.dataSourceGroup.connClosed();
         }
         
         this.conn.close();
+        this.conn = null;
     }
+
+
     
+    /**
+     * 获取：连接使用者的信息
+     */
+    public String getCaller()
+    {
+        return caller;
+    }
+
 
 
     @Override

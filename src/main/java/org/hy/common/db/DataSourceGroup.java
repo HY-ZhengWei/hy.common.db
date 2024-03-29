@@ -153,9 +153,10 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
      *    并且，标记 this.validDSIndex 有效索引号为:Integer.MAX_VALUE。
      *    即，所有数据库连接池都不可用，下次获取连接时，不再一一尝试获取连接。
      * 
+     * @param i_Caller  使用连接者的信息
      * @return
      */
-    public synchronized java.sql.Connection getConnection()
+    public synchronized java.sql.Connection getConnection(String i_Caller)
     {
         int v_Size  = this.dataSources.size();
         
@@ -175,7 +176,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
                     continue;
                 }
                 
-                Connection v_Conn = new Connection(v_OutsideConn ,this);
+                Connection v_Conn = new Connection(i_Caller ,v_OutsideConn ,this);
                 this.connActiveCount++;
                 if ( this.connActiveCount > this.connMaxUseCount )
                 {
@@ -246,7 +247,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
         java.sql.Connection v_Conn = null;
         try
         {
-            v_Conn = this.getConnection();
+            v_Conn = this.getConnection("DataSourceGroup.getDBProductInfo");
             if ( v_Conn == null )
             {
                 return;
