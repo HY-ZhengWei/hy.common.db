@@ -36,6 +36,7 @@ import org.hy.common.xml.log.Logger;
  *              v6.0   2018-03-09  添加：实现XJavaID接口，在数据库异常时，能更精确的报出异常的数据库是谁。
  *              v7.0   2019-03-12  添加：获取数据库连接信息。
  *              v8.0   2023-04-18  添加：MariaDB数据库类型的识别
+ *              v9.0   2024-08-29  添加：获取指定索引号的数据库连接池
  */
 public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJavaID ,Serializable
 {
@@ -137,6 +138,35 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
         if ( this.validDSIndex < 0 )
         {
             this.validDSIndex = 0;
+        }
+    }
+    
+    
+    
+    /**
+     * 获取指定索引号的数据库连接池
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2024-08-29
+     * @version     v1.0
+     *
+     * @param i_DSIndex  最小下标从0开始
+     * @return
+     */
+    public DataSource get(int i_DSIndex)
+    {
+        if ( Help.isNull(this.dataSources) )
+        {
+            throw new NullPointerException("DataSource is null.");
+        }
+        
+        if ( i_DSIndex < this.dataSources.size() )
+        {
+            return this.dataSources.get(i_DSIndex);
+        }
+        else
+        {
+            return null;
         }
     }
     
