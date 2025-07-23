@@ -434,6 +434,12 @@ public class DBCondition implements Serializable
             for (String v_Key : this.placeholders.keySet())
             {
                 v_Placeholder = v_Key;
+                // 格式为  {:占位符}
+                if ( v_Placeholder.startsWith("{") )
+                {
+                    v_Placeholder = v_Placeholder.substring(2 ,v_Placeholder.length() - 1);
+                }
+                
                 Object v_Value = getValueByMap(v_Placeholder ,i_ConditionValues ,true);
                 
                 v_Placeholder = StringHelp.replaceAll(v_Placeholder ,"." ,"_"); // "点" 原本就是Fel关键字，所以要替换 ZhengWei(HY) Add 2017-05-23
@@ -487,6 +493,12 @@ public class DBCondition implements Serializable
             for (String v_Key : this.placeholders.keySet())
             {
                 v_Placeholder = v_Key;
+                // 格式为  {:占位符}
+                if ( v_Placeholder.startsWith("{") )
+                {
+                    v_Placeholder = v_Placeholder.substring(2 ,v_Placeholder.length() - 1);
+                }
+                
                 Object v_Value = getValueByObject(v_Placeholder ,i_ConditionValues ,true);
                 
                 v_Placeholder = StringHelp.replaceAll(v_Placeholder ,"." ,"_"); // "点" 原本就是Fel关键字，所以要替换 ZhengWei(HY) Add 2017-05-23
@@ -693,7 +705,16 @@ public class DBCondition implements Serializable
             
             for (String v_Key : this.placeholders.keySet())
             {
-                this.conditionFel = StringHelp.replaceAll(this.conditionFel ,DBSQL.$Placeholder + v_Key ,StringHelp.replaceAll(v_Key ,"." ,"_"));
+                // 格式为  {:占位符}
+                if ( v_Key.startsWith("{") )
+                {
+                    this.conditionFel = StringHelp.replaceAll(this.conditionFel ,v_Key                      ,StringHelp.replaceAll(v_Key.substring(2 ,v_Key.length() - 1) ,"." ,"_"));
+                }
+                // 格式为  :占位符
+                else
+                {
+                    this.conditionFel = StringHelp.replaceAll(this.conditionFel ,DBSQL.$Placeholder + v_Key ,StringHelp.replaceAll(v_Key ,"." ,"_"));
+                }
             }
             
             this.conditionFel = StringHelp.replaceAll(this.conditionFel ,$Fel_BlockingUp ,new String[]{""});
