@@ -25,7 +25,7 @@ import org.hy.common.StringHelp;
  *              v5.0  2019-03-13  添加：占位符命名要求严格的规则。
  *                                      规则：占位符的命名，不能是小于等于2位的纯数字
  *                                             防止将类似于时间格式 00:00:00 的字符解释为占位符
- *              v6.0  2020-06-08  修改：点位符的存储结构改为 TablePartitionLink
+ *              v6.0  2020-06-08  修改：占位符的存储结构改为 TablePartitionLink
  * @createDate  2012-10-30
  */
 public class DBSQL_Split extends SplitSegment
