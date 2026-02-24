@@ -6,13 +6,13 @@
 
     <groupId>cn.openapis</groupId>
     <artifactId>hy.common.db</artifactId>
-    <version>2.7.6</version>
+    <version>2.7.7</version>
     <packaging>jar</packaging>
 
     <name>cn.openapis.hy.common.db</name>
     <!-- https://gitee.com/HY-ZhengWei/hy.common.db -->
     <url>https://github.com/HY-ZhengWei/hy.common.db</url>
-    <description>cn.openapis.hy.common.db</description>
+    <description>关系数据库通用组件（General component for relational databases）</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -54,14 +54,14 @@
         <dependency>
             <groupId>cn.openapis</groupId>
             <artifactId>hy.common.base</artifactId>
-            <version>1.0.204</version>
+            <version>1.0.205</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>cn.openapis</groupId>
             <artifactId>hy.common.file</artifactId>
-            <version>1.5.7</version>
+            <version>1.5.8</version>
             <scope>provided</scope>
         </dependency>
 
@@ -78,9 +78,9 @@
         </dependency>
         
         <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
-            <version>3.0-alpha-1</version>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>6.1.0</version>
             <scope>test</scope>
         </dependency>
 
