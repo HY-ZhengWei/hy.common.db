@@ -37,6 +37,7 @@ import org.hy.common.xml.log.Logger;
  *              v7.0   2019-03-12  添加：获取数据库连接信息。
  *              v8.0   2023-04-18  添加：MariaDB数据库类型的识别
  *              v9.0   2024-08-29  添加：获取指定索引号的数据库连接池
+ *              v10.0  2026-04-13  添加：国产达梦数据库的类型
  */
 public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJavaID ,Serializable
 {
@@ -57,6 +58,8 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     public static  final String $DBType_SQLite     = "SQLITE";
                    
     public static  final String $DBType_PostgreSQL = "POSTGRESQL";
+    
+    public static  final String $DBType_DaMeng     = "DAMENG";
     
     
     
@@ -316,9 +319,13 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
             {
                 this.dbProductType = $DBType_PostgreSQL;
             }
+            else if ( v_DBName.indexOf("DM DBMS") >= 0 )
+            {
+                this.dbProductType = $DBType_DaMeng;
+            }
             else
             {
-                this.dbProductType = "";
+                this.dbProductType = this.dbProductName;
             }
         }
         catch (Exception exce)
