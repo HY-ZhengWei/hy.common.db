@@ -109,6 +109,7 @@ import org.hy.common.xml.log.Logger;
  *                                3. 添加：识别 Delete语法中的表名称
  *                                4. 添加：动态<[...]>SQL的解释，无须写成 WHERE 1 = 1 的固定形式。
  *              v20.0 2023-09-26  1. 修改：支持SQL Server数据库时间格式 HH:mm:ss 中的 :mm 防止被解释为占位符：发现人：王雨墨
+ *              v21.0 2026-04-23  1. 添加：取数据库中表字段的默认值。
  */
 public class DBSQL implements Serializable
 {
@@ -205,6 +206,9 @@ public class DBSQL implements Serializable
     
     
     
+    /** 数据库中的Default关键字 */
+    private final static String              $Default            = "DEFAULT";
+    
     /** 数据库中的NULL关键字 */
     private final static String              $NULL               = "NULL";
                                                                  
@@ -277,7 +281,7 @@ public class DBSQL implements Serializable
     /**
      * 是否默认为NULL值写入到数据库。针对所有占位符做的统一设置。
      * 
-     * 当 this.defaultNull = true 时，任何类型的值为null对象时，均向以NULL值写入到数据库。
+     * 当 this.defaultNull = true 时，任何类型的值为null对象时，均以NULL值写入到数据库。
      * 当 this.defaultNull = false 时，
      *      1. String 类型的值，按 "" 空字符串写入到数据库 或 拼接成SQL语句
      *      2. 其它类型的值，以NULL值写入到数据库。
@@ -285,6 +289,18 @@ public class DBSQL implements Serializable
      * 默认为：false。
      */
     private boolean                   defaultNull;
+    
+    /**
+     * 是否取数据库中表字段的默认值，当数据库未定义时写NULL值。
+     * 
+     * 当 this.defaultDB = true 时，任何类型的值为null对象时，均以数据库中表字段的默认值写入到数据库。
+     * 当 this.defaultDB = false 时，采用 this.defaultNull 的规则。
+     * 
+     * 即：defaultDB 优先级大于 defaultNull
+     * 
+     * 默认为：false。
+     */
+    private boolean                   defaultDB;
     
     
     
@@ -302,6 +318,7 @@ public class DBSQL implements Serializable
         this.safeCheck        = true;
         this.conditions       = new HashMap<String ,DBConditions>();
         this.defaultNull      = false;
+        this.defaultDB        = false;
         this.setNotPlaceholders("MI,SS,mi,ss,mm");
         this.setKeyReplace(true);
     }
@@ -1059,7 +1076,12 @@ public class DBSQL implements Serializable
                         else
                         {
                             String v_Value = null;
-                            if ( v_ConditionGroup != null || this.defaultNull )
+                            if ( this.defaultDB )
+                            {
+                                v_Value = $Default;
+                                v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
+                            }
+                            else if ( v_ConditionGroup != null || this.defaultNull )
                             {
                                 // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                 v_Value = $NULL;
@@ -1279,11 +1301,16 @@ public class DBSQL implements Serializable
                                     else
                                     {
                                         String v_Value = null;
-                                        if ( v_ConditionGroup != null || this.defaultNull )
+                                        if ( this.defaultDB )
+                                        {
+                                            v_Value = $Default;
+                                            v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
+                                        }
+                                        else if ( v_ConditionGroup != null || this.defaultNull )
                                         {
                                             // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                             v_Value = $NULL;
-                                            v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
+                                            v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                                         }
                                         else
                                         {
@@ -1342,12 +1369,16 @@ public class DBSQL implements Serializable
                             // 对于没有<[ ]>可选分段的SQL
                             if ( 1 == this.segments.size() )
                             {
-                                if ( v_ConditionGroup != null || this.defaultNull )
+                                if ( this.defaultDB )
+                                {
+                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,$Default ,v_DBType);
+                                    v_Info = this.dbSQLFill.fillAll    (v_Info ,v_PlaceHolder ,$Default ,v_DBType);
+                                }
+                                else if ( v_ConditionGroup != null || this.defaultNull )
                                 {
                                     // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
-                                    String v_Value = $NULL;
-                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
-                                    v_Info = this.dbSQLFill.fillAll    (v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
+                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,$NULL ,v_DBType);
+                                    v_Info = this.dbSQLFill.fillAll    (v_Info ,v_PlaceHolder ,$NULL ,v_DBType);
                                 }
                                 else
                                 {
@@ -1362,7 +1393,7 @@ public class DBSQL implements Serializable
                                 {
                                     // 占位符取值条件。可实现NULL值写入到数据库的功能  ZhengWei(HY) Add 2018-08-10
                                     v_Value = $NULL;
-                                    v_Info = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
+                                    v_Info  = this.dbSQLFill.fillAllMark(v_Info ,v_PlaceHolder ,v_Value ,v_DBType);
                                 }
                                 else
                                 {
@@ -1966,8 +1997,44 @@ public class DBSQL implements Serializable
         this.defaultNull = defaultNull;
     }
 
+    
+    
+    /**
+     * 获取：是否取数据库中表字段的默认值，当数据库未定义时写NULL值。
+     * 
+     * 当 this.defaultDB = true 时，任何类型的值为null对象时，均以数据库中表字段的默认值写入到数据库。
+     * 当 this.defaultDB = false 时，采用 this.defaultNull 的规则。
+     * 
+     * 即：defaultDB 优先级大于 defaultNull
+     * 
+     * 默认为：false。
+     */
+    public boolean isDefaultDB()
+    {
+        return defaultDB;
+    }
+
 
     
+    /**
+     * 设置：是否取数据库中表字段的默认值，当数据库未定义时写NULL值。
+     * 
+     * 当 this.defaultDB = true 时，任何类型的值为null对象时，均以数据库中表字段的默认值写入到数据库。
+     * 当 this.defaultDB = false 时，采用 this.defaultNull 的规则。
+     * 
+     * 即：defaultDB 优先级大于 defaultNull
+     * 
+     * 默认为：false。
+     * 
+     * @param i_DefaultDB  是否取数据库中表字段的默认值，当数据库未定义时写NULL值。
+     */
+    public void setDefaultDB(boolean i_DefaultDB)
+    {
+        this.defaultDB = i_DefaultDB;
+    }
+
+
+
     /**
      * 获取：数据库连接池组
      */
