@@ -46,9 +46,9 @@ public class JU_Milvus
     public JU_Milvus()
     {
         ConnectConfig v_MilvusConfig = ConnectConfig.builder()
-                                                    .uri("http://10.0.2.12:19530")
+                                                    .uri("http://127.0.0.1:19530")
                                                     .username("root")
-                                                    .password("lpssys@2026")
+                                                    .password("密码")
                                                     .dbName("Common")
                                                     .build();
         this.milvusHelp = new MilvusHelp(new MilvusClientV2(v_MilvusConfig));
