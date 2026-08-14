@@ -8,6 +8,8 @@ import java.util.Map;
 
 import org.hy.common.Help;
 
+import io.milvus.v2.service.collection.request.CreateCollectionReq;
+
 
 
 
@@ -20,6 +22,7 @@ import org.hy.common.Help;
  * @version     v1.0
  *              v1.1  2014-04-02  修复：字段重新别名后，无法XJava的问题
  *              v2.0  2023-04-21  添加：字段类型获取
+ *              v3.0  2026-08-02  添加：支持Milvus向量库
  */
 public class DBTableMetaData
 {
@@ -27,7 +30,7 @@ public class DBTableMetaData
     /** List.key = 字段索引号 List.value = 字段名称 */
     private List<String>            col_ByIndex;
     
-    /** List.key = 字段索引号 List.value = 字段类型。对照 java.sql.Types */
+    /** List.key = 字段索引号 List.value = 字段类型。对照 java.sql.Types 和 io.milvus.v2.common.DataType */
     private List<Integer>           colType_ByIndex;
     
     /** Map.key = 字段名称      Map.value = 字段索引号 */
@@ -78,6 +81,35 @@ public class DBTableMetaData
         catch (Exception exce)
         {
             throw new java.lang.RuntimeException(exce.getMessage());
+        }
+    }
+    
+    
+    
+    /**
+     * 填充（设置）元数据：Milvus向量库
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-02
+     * @version     v1.0
+     *
+     * @param i_Fileds  字段元信息
+     */
+    public synchronized void set(List<CreateCollectionReq.FieldSchema> i_Fileds)
+    {
+        this.clear();
+        
+        if ( Help.isNull(i_Fileds) )
+        {
+            return;
+        }
+        
+        int v_ColCount = i_Fileds.size();
+        for (int v_ColIndex=0; v_ColIndex<v_ColCount; v_ColIndex++)
+        {
+            CreateCollectionReq.FieldSchema v_Filed = i_Fileds.get(v_ColIndex);
+            this.addColumnInfo(      v_ColIndex ,v_Filed.getName());
+            this.colType_ByIndex.add(v_ColIndex ,v_Filed.getDataType().ordinal());
         }
     }
     
