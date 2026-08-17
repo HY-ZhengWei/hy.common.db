@@ -46,12 +46,21 @@ public class JU_Milvus
     public JU_Milvus()
     {
         ConnectConfig v_MilvusConfig = ConnectConfig.builder()
-                                                    .uri("http://127.0.0.1:19530")
+                                                    .uri("http://10.0.2.12:19530")
                                                     .username("root")
-                                                    .password("密码")
+                                                    .password("lpssys@2026")
                                                     .dbName("Common")
+                                                    .connectTimeoutMs(10 * 1000)
                                                     .build();
-        this.milvusHelp = new MilvusHelp(new MilvusClientV2(v_MilvusConfig));
+        this.milvusHelp = new MilvusHelp(new MilvusClientV2(v_MilvusConfig) ,60 * 1000L);
+    }
+    
+    
+    
+    @Test
+    public void test_isValid()
+    {
+        System.out.println(this.milvusHelp.isValid());
     }
     
     

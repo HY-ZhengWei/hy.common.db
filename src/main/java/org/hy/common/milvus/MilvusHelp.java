@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.hy.common.Help;
@@ -100,6 +101,9 @@ public class MilvusHelp implements XJavaID
     /** 注释 */
     private String         comment;
     
+    /** 整体超时时长（单位：毫秒） */
+    private Long           timeout;
+    
     
     
     public MilvusHelp()
@@ -111,8 +115,51 @@ public class MilvusHelp implements XJavaID
     
     public MilvusHelp(MilvusClientV2 i_Milvus)
     {
+        this(i_Milvus ,null);
+    }
+    
+    
+    
+    /**
+     * 构造器
+     *
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-17
+     * @version     v1.0
+     *
+     * @param i_Milvus     
+     * @param i_TimeoutMS  超时时长（单位：毫秒）
+     */
+    public MilvusHelp(MilvusClientV2 i_Milvus ,Long i_TimeoutMS)
+    {
         super();
         this.setMilvus(i_Milvus);
+        
+        if ( i_TimeoutMS != null && i_TimeoutMS > 0 )
+        {
+            this.timeout = i_TimeoutMS;
+            this.milvus.withTimeout(this.timeout ,TimeUnit.MILLISECONDS);
+        }
+        else
+        {
+            this.timeout = null;
+        }
+    }
+    
+    
+    
+    /**
+     * 整体超时时长（单位：毫秒）
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-17
+     * @version     v1.0
+     *
+     * @return
+     */
+    public Long getTimeout()
+    {
+        return this.timeout;
     }
     
     
@@ -127,7 +174,7 @@ public class MilvusHelp implements XJavaID
      * @param i_Collection 表的Json结构。与Milvus官网页面中的 “代码” 页面中的Json格式保持一致。
      * @return
      */
-    public boolean createCollection(Collection i_Collection)
+    public Boolean createCollection(Collection i_Collection)
     {
         return this.createCollection(null ,i_Collection);
     }
@@ -143,10 +190,10 @@ public class MilvusHelp implements XJavaID
      *
      * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
      * @param i_Collection 表的Json结构。与Milvus官网页面中的 “代码” 页面中的Json格式保持一致。
-     * @return
+     * @return             返回 NULL 表示发生异常
      */
     @SuppressWarnings("unchecked")
-    public boolean createCollection(String i_DBName ,Collection i_Collection)
+    public Boolean createCollection(String i_DBName ,Collection i_Collection)
     {
         if ( i_Collection == null )
         {
@@ -361,8 +408,33 @@ public class MilvusHelp implements XJavaID
             v_ReqBuilder.property("timezone" ,i_Collection.getProperties().getTimezone());
         }
         
-        this.milvus.createCollection(v_ReqBuilder.build());
-        return true;
+        try
+        {
+            this.milvus.createCollection(v_ReqBuilder.build());
+            return true;
+        }
+        catch (Exception exce)
+        {
+            $Logger.error("Create Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_Collection.getCollection_name() + "] is error" ,exce);
+            return null;
+        }
+    }
+    
+    
+    
+    /**
+     * Milvus连接正确，及客户端配置是否正确的效验
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-17
+     * @version     v1.0
+     *
+     * @return
+     */
+    public boolean isValid()
+    {
+        Boolean v_Exists = this.exists(MilvusHelp.class.getSimpleName());
+        return v_Exists != null;
     }
     
     
@@ -374,7 +446,8 @@ public class MilvusHelp implements XJavaID
      * @createDate  2026-08-14
      * @version     v1.0
      *
-     * @return             返回表名称列表
+     * @return  返回表名称列表
+     *          返回 NULL 表示发生异常
      */
     public List<String> queryCollections()
     {
@@ -390,8 +463,9 @@ public class MilvusHelp implements XJavaID
      * @createDate  2026-08-14
      * @version     v1.0
      *
-     * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
-     * @return             返回表名称列表
+     * @param i_DBName  库名称。当milvus客户端中配置有库名称时，此值可免填写。
+     * @return          返回表名称列表
+     *                  返回 NULL 表示发生异常
      */
     public List<String> queryCollections(String i_DBName)
     {
@@ -402,8 +476,16 @@ public class MilvusHelp implements XJavaID
             v_ListBuilder.databaseName(i_DBName);
         }
         
-        ListCollectionsResp v_ListResp = this.milvus.listCollectionsV2(v_ListBuilder.build());
-        return v_ListResp.getCollectionNames();
+        try
+        {
+            ListCollectionsResp v_ListResp = this.milvus.listCollectionsV2(v_ListBuilder.build());
+            return v_ListResp.getCollectionNames();
+        }
+        catch (Exception exce)
+        {
+            $Logger.error("Query Collections[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "] is error" ,exce);
+            return null;
+        }
     }
     
     
@@ -417,8 +499,9 @@ public class MilvusHelp implements XJavaID
      *
      * @param i_TableName  表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
      * @return             返回是否加载成功
+     *                     返回 NULL 表示发生异常
      */
-    public boolean exists(String i_TableName)
+    public Boolean exists(String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
@@ -441,8 +524,9 @@ public class MilvusHelp implements XJavaID
      * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
      * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
      * @return             返回是否加载成功
+     *                     返回 NULL 表示发生异常
      */
-    public boolean exists(String i_DBName ,String i_TableName)
+    public Boolean exists(String i_DBName ,String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
@@ -456,7 +540,15 @@ public class MilvusHelp implements XJavaID
             v_HasLoadBuilder.databaseName(i_DBName);
         }
         
-        return this.milvus.hasCollection(v_HasLoadBuilder.build());
+        try
+        {
+            return this.milvus.hasCollection(v_HasLoadBuilder.build());
+        }
+        catch (Exception exce)
+        {
+            $Logger.error("exists Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_TableName + "] is error" ,exce);
+            return null;
+        }
     }
     
     
@@ -470,8 +562,9 @@ public class MilvusHelp implements XJavaID
      *
      * @param i_TableName  表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
      * @return             返回是否加载成功
+     *                     返回 NULL 表示发生异常
      */
-    public boolean isLoadCollection(String i_TableName)
+    public Boolean isLoadCollection(String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
@@ -494,8 +587,9 @@ public class MilvusHelp implements XJavaID
      * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
      * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
      * @return             返回是否加载成功
+     *                     返回 NULL 表示发生异常
      */
-    public boolean isLoadCollection(String i_DBName ,String i_TableName)
+    public Boolean isLoadCollection(String i_DBName ,String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
@@ -509,7 +603,15 @@ public class MilvusHelp implements XJavaID
             v_GetLoadBuilder.databaseName(i_DBName);
         }
         
-        return this.milvus.getLoadState(v_GetLoadBuilder.build());
+        try
+        {
+            return this.milvus.getLoadState(v_GetLoadBuilder.build());
+        }
+        catch (Exception exce)
+        {
+            $Logger.error("IsLoad Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_TableName + "] is error" ,exce);
+            return null;
+        }
     }
     
     
@@ -523,8 +625,9 @@ public class MilvusHelp implements XJavaID
      *
      * @param i_TableName  表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
      * @return             返回是否加载成功
+     *                     返回 NULL 表示发生异常
      */
-    public boolean loadCollection(String i_TableName)
+    public Boolean loadCollection(String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
@@ -547,8 +650,9 @@ public class MilvusHelp implements XJavaID
      * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
      * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
      * @return             返回是否加载成功
+     *                     返回 NULL 表示发生异常
      */
-    public boolean loadCollection(String i_DBName ,String i_TableName)
+    public Boolean loadCollection(String i_DBName ,String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
@@ -584,8 +688,9 @@ public class MilvusHelp implements XJavaID
      *
      * @param i_TableName  表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
      * @return             返回是否释放成功
+     *                     返回 NULL 表示发生异常
      */
-    public boolean releaseCollection(String i_TableName)
+    public Boolean releaseCollection(String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
@@ -608,8 +713,9 @@ public class MilvusHelp implements XJavaID
      * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
      * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
      * @return             返回是否释放成功
+     *                     返回 NULL 表示发生异常
      */
-    public boolean releaseCollection(String i_DBName ,String i_TableName)
+    public Boolean releaseCollection(String i_DBName ,String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
@@ -631,7 +737,9 @@ public class MilvusHelp implements XJavaID
         {
             $Logger.error("Release Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_TableName + "] error" ,exce);
         }
-        return !this.isLoadCollection(i_DBName ,i_TableName);
+        
+        Boolean v_Ret = this.isLoadCollection(i_DBName ,i_TableName);
+        return v_Ret == null ? null : !v_Ret;
     }
     
     
@@ -645,8 +753,9 @@ public class MilvusHelp implements XJavaID
      *
      * @param i_TableName  表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
      * @return             返回是否释放成功
+     *                     返回 NULL 表示发生异常
      */
-    public boolean dropCollection(String i_TableName)
+    public Boolean dropCollection(String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
@@ -669,8 +778,9 @@ public class MilvusHelp implements XJavaID
      * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
      * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
      * @return             返回是否删除成功
+     *                     返回 NULL 表示发生异常
      */
-    public boolean dropCollection(String i_DBName ,String i_TableName)
+    public Boolean dropCollection(String i_DBName ,String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
@@ -692,8 +802,8 @@ public class MilvusHelp implements XJavaID
         catch (Exception exce)
         {
             $Logger.error("Drop Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_TableName + "] error" ,exce);
+            return null;
         }
-        return false;
     }
     
     
