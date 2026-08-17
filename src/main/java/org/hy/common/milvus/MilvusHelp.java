@@ -36,13 +36,20 @@ import io.milvus.v2.service.collection.request.CreateCollectionReq.CreateCollect
 import io.milvus.v2.service.collection.request.CreateCollectionReq.Function.FunctionBuilder;
 import io.milvus.v2.service.collection.request.DescribeCollectionReq;
 import io.milvus.v2.service.collection.request.DescribeCollectionReq.DescribeCollectionReqBuilder;
+import io.milvus.v2.service.collection.request.DropCollectionReq;
+import io.milvus.v2.service.collection.request.DropCollectionReq.DropCollectionReqBuilder;
 import io.milvus.v2.service.collection.request.GetLoadStateReq;
 import io.milvus.v2.service.collection.request.GetLoadStateReq.GetLoadStateReqBuilder;
+import io.milvus.v2.service.collection.request.HasCollectionReq;
+import io.milvus.v2.service.collection.request.HasCollectionReq.HasCollectionReqBuilder;
+import io.milvus.v2.service.collection.request.ListCollectionsReq;
+import io.milvus.v2.service.collection.request.ListCollectionsReq.ListCollectionsReqBuilder;
 import io.milvus.v2.service.collection.request.LoadCollectionReq;
 import io.milvus.v2.service.collection.request.LoadCollectionReq.LoadCollectionReqBuilder;
 import io.milvus.v2.service.collection.request.ReleaseCollectionReq;
 import io.milvus.v2.service.collection.request.ReleaseCollectionReq.ReleaseCollectionReqBuilder;
 import io.milvus.v2.service.collection.response.DescribeCollectionResp;
+import io.milvus.v2.service.collection.response.ListCollectionsResp;
 import io.milvus.v2.service.vector.request.AnnSearchReq;
 import io.milvus.v2.service.vector.request.DeleteReq;
 import io.milvus.v2.service.vector.request.DeleteReq.DeleteReqBuilder;
@@ -167,12 +174,12 @@ public class MilvusHelp implements XJavaID
         {
             if ( Help.isNull(v_Field.getName()) )
             {
-                $Logger.error("Create Collection[" + i_Collection.getCollection_name() + "] Field.name is null");
+                $Logger.error("Create Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_Collection.getCollection_name() + "] Field.name is null");
                 return false;
             }
             if ( v_Field.getDataType() == null )
             {
-                $Logger.error("Create Collection[" + i_Collection.getCollection_name() + "] Field[" + v_Field.getName() + "].dataType is null");
+                $Logger.error("Create Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_Collection.getCollection_name() + "] Field[" + v_Field.getName() + "].dataType is null");
                 return false;
             }
             
@@ -191,7 +198,7 @@ public class MilvusHelp implements XJavaID
                     if ( !Help.isNull(v_PKFieldName) )
                     {
                         // 仅允许有一个主键
-                        $Logger.error("Create Collection[" + i_Collection.getCollection_name() + "] have two primary keys");
+                        $Logger.error("Create Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_Collection.getCollection_name() + "] have two primary keys");
                         return false;
                     }
                     v_PKFieldName = v_Field.getName();
@@ -246,7 +253,7 @@ public class MilvusHelp implements XJavaID
                 else
                 {
                     // 索引类型必须有
-                    $Logger.error("Create Collection[" + i_Collection.getCollection_name() + "] Field[" + v_Field.getName() + "].indexType is null");
+                    $Logger.error("Create Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_Collection.getCollection_name() + "] Field[" + v_Field.getName() + "].indexType is null");
                     return false;
                 }
                 if ( !Help.isNull(v_FIndex.getIndex_name()) )
@@ -286,7 +293,7 @@ public class MilvusHelp implements XJavaID
                 else
                 {
                     // 函数名称必须有
-                    $Logger.error("Create Collection[" + i_Collection.getCollection_name() + "] Function.name is null");
+                    $Logger.error("Create Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_Collection.getCollection_name() + "] Function.name is null");
                     return false;
                 }
                 if ( !Help.isNull(v_Function.getDescription()) )
@@ -300,7 +307,7 @@ public class MilvusHelp implements XJavaID
                 else
                 {
                     // 函数类型必须有
-                    $Logger.error("Create Collection[" + i_Collection.getCollection_name() + "] Function[" + v_Function.getName() + "].type is null");
+                    $Logger.error("Create Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_Collection.getCollection_name() + "] Function[" + v_Function.getName() + "].type is null");
                     return false;
                 }
                 if ( !Help.isNull(v_Function.getInput_field_names()) )
@@ -319,7 +326,7 @@ public class MilvusHelp implements XJavaID
         if ( Help.isNull(v_PKFieldName) )
         {
             // 必须有主键
-            $Logger.error("Create Collection[" + i_Collection.getCollection_name() + "] not have primary key");
+            $Logger.error("Create Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_Collection.getCollection_name() + "] not have primary key");
             return false;
         }
         
@@ -356,6 +363,100 @@ public class MilvusHelp implements XJavaID
         
         this.milvus.createCollection(v_ReqBuilder.build());
         return true;
+    }
+    
+    
+    
+    /**
+     * 查询表列表
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-14
+     * @version     v1.0
+     *
+     * @return             返回表名称列表
+     */
+    public List<String> queryCollections()
+    {
+        return this.queryCollections(null);
+    }
+    
+    
+    
+    /**
+     * 查询表列表
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-14
+     * @version     v1.0
+     *
+     * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
+     * @return             返回表名称列表
+     */
+    public List<String> queryCollections(String i_DBName)
+    {
+        ListCollectionsReqBuilder v_ListBuilder = ListCollectionsReq.builder();
+        
+        if ( !Help.isNull(i_DBName) )
+        {
+            v_ListBuilder.databaseName(i_DBName);
+        }
+        
+        ListCollectionsResp v_ListResp = this.milvus.listCollectionsV2(v_ListBuilder.build());
+        return v_ListResp.getCollectionNames();
+    }
+    
+    
+    
+    /**
+     * 判定表是否存在
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-17
+     * @version     v1.0
+     *
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
+     * @return             返回是否加载成功
+     */
+    public boolean exists(String i_TableName)
+    {
+        if ( Help.isNull(i_TableName) )
+        {
+            return false;
+        }
+        
+        String [] v_Names = MilvusHelp.parserDBTableName(i_TableName);
+        return this.exists(v_Names[0] ,v_Names[1]);
+    }
+    
+    
+    
+    /**
+     * 判定表是否存在
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-17
+     * @version     v1.0
+     *
+     * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
+     * @return             返回是否加载成功
+     */
+    public boolean exists(String i_DBName ,String i_TableName)
+    {
+        if ( Help.isNull(i_TableName) )
+        {
+            return false;
+        }
+        
+        HasCollectionReqBuilder v_HasLoadBuilder = HasCollectionReq.builder().collectionName(i_TableName);
+        
+        if ( !Help.isNull(i_DBName) )
+        {
+            v_HasLoadBuilder.databaseName(i_DBName);
+        }
+        
+        return this.milvus.hasCollection(v_HasLoadBuilder.build());
     }
     
     
@@ -461,7 +562,14 @@ public class MilvusHelp implements XJavaID
             v_LoadBuilder.databaseName(i_DBName);
         }
         
-        this.milvus.loadCollection(v_LoadBuilder.build());
+        try
+        {
+            this.milvus.loadCollection(v_LoadBuilder.build());
+        }
+        catch (Exception exce)
+        {
+            $Logger.error("Load Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_TableName + "] error" ,exce);
+        }
         return this.isLoadCollection(i_DBName ,i_TableName);
     }
     
@@ -515,8 +623,77 @@ public class MilvusHelp implements XJavaID
             v_ReleaseBuilder.databaseName(i_DBName);
         }
         
-        this.milvus.releaseCollection(v_ReleaseBuilder.build());
+        try
+        {
+            this.milvus.releaseCollection(v_ReleaseBuilder.build());
+        }
+        catch (Exception exce)
+        {
+            $Logger.error("Release Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_TableName + "] error" ,exce);
+        }
         return !this.isLoadCollection(i_DBName ,i_TableName);
+    }
+    
+    
+    
+    /**
+     * 删除表
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-14
+     * @version     v1.0
+     *
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
+     * @return             返回是否释放成功
+     */
+    public boolean dropCollection(String i_TableName)
+    {
+        if ( Help.isNull(i_TableName) )
+        {
+            return false;
+        }
+        
+        String [] v_Names = MilvusHelp.parserDBTableName(i_TableName);
+        return this.dropCollection(v_Names[0] ,v_Names[1]);
+    }
+    
+    
+    
+    /**
+     * 删除表
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-14
+     * @version     v1.0
+     *
+     * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
+     * @return             返回是否删除成功
+     */
+    public boolean dropCollection(String i_DBName ,String i_TableName)
+    {
+        if ( Help.isNull(i_TableName) )
+        {
+            return false;
+        }
+        
+        DropCollectionReqBuilder v_DropBuilder = DropCollectionReq.builder().collectionName(i_TableName);
+        
+        if ( !Help.isNull(i_DBName) )
+        {
+            v_DropBuilder.databaseName(i_DBName);
+        }
+        
+        try
+        {
+            this.milvus.dropCollection(v_DropBuilder.build());
+            return true;
+        }
+        catch (Exception exce)
+        {
+            $Logger.error("Drop Collection[" + Help.NVL(i_DBName ,this.milvus.currentUsedDatabase()) + "." + i_TableName + "] error" ,exce);
+        }
+        return false;
     }
     
     
