@@ -202,6 +202,10 @@ public class JU_Milvus
         v_DataList.add(v_Data);
         this.milvusHelp.insert("Demo" ,v_DataList);
         
+        // 按Json字符串写入多行数据
+        v_DataJson = v_Gson.toJson(v_DataList);
+        this.milvusHelp.inserts("Demo" ,v_DataJson);
+        
         // 按Set集合写入多行数据
         Set<JU_MilvusData> v_DataSet = new HashSet<JU_MilvusData>();
         v_DataSet.add(v_Data);
@@ -361,17 +365,20 @@ public class JU_Milvus
     {
         MilvusResult v_MilvusResult = new MilvusResult();
         MilvusData   v_MilvusData   = null;
+        XJSON        v_XJson        = new XJSON();
         
         // 单个向量的神经网络搜索
         FloatVec         v_Vector  = new FloatVec(new float[]{5.0F ,-5.0F});
         List<BaseVector> v_Vectors = Collections.singletonList(v_Vector);
         v_MilvusData = this.milvusHelp.queryVector("Demo_NoAutoID_2Vector" ,"vectorElse" ,v_Vectors ,3 ,v_MilvusResult);
         System.out.println(v_MilvusData);
+        System.out.println(v_XJson.toJsonText(v_Vectors));
         
         // 单个向量的神经网络搜索
         v_Vectors    = Arrays.asList(v_Vector ,v_Vector);
         v_MilvusData = this.milvusHelp.queryVector("Demo_NoID" ,"vector" ,v_Vectors ,3 ,v_MilvusResult);
         System.out.println(v_MilvusData);
+        System.out.println(v_XJson.toJsonText(v_Vectors));
     }
     
 }

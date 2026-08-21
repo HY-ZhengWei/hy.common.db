@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +29,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
 import io.milvus.v2.client.MilvusClientV2;
+import io.milvus.v2.common.DataType;
 import io.milvus.v2.common.IndexParam;
 import io.milvus.v2.common.IndexParam.IndexParamBuilder;
 import io.milvus.v2.service.collection.request.AddFieldReq;
@@ -896,10 +898,10 @@ public class MilvusHelp implements XJavaID
      * @createDate  2026-08-05
      * @version     v1.0
      *
-     * @param i_TableName      表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
-     * @return
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
+     * @return             Map.key 为全大写的字段名称，Map.value 为原始字段名称
      */
-    public List<String> queryFields(String i_TableName)
+    public Map<String ,String> queryFields(String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
@@ -919,18 +921,18 @@ public class MilvusHelp implements XJavaID
      * @createDate  2026-08-05
      * @version     v1.0
      *
-     * @param i_DBName         库名称。当milvus客户端中配置有库名称时，此值可免填写。
-     * @param i_TableName      表名称，必填项。即：向量库中Collection的名称
-     * @return
+     * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
+     * @return             Map.key 为全大写的字段名称，Map.value 为原始字段名称
      */
-    public List<String> queryFields(String i_DBName ,String i_TableName)
+    public Map<String ,String> queryFields(String i_DBName ,String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
             return null;
         }
         
-        return this.queryFields_Core(i_DBName ,i_TableName ,true);
+        return this.queryFields_Core(i_DBName ,i_TableName ,true ,false);
     }
     
     
@@ -942,13 +944,13 @@ public class MilvusHelp implements XJavaID
      * @createDate  2026-08-05
      * @version     v1.0
      *
-     * @param i_DBName         库名称。当milvus客户端中配置有库名称时，此值可免填写。
-     * @param i_TableName      表名称，必填项。即：向量库中Collection的名称
-     * @return
+     * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
+     * @return             Map.key 为全大写的字段名称，Map.value 为原始字段名称
      */
-    public static List<String> queryFields(List<CreateCollectionReq.FieldSchema> i_Fileds)
+    public static Map<String ,String> queryFields(List<CreateCollectionReq.FieldSchema> i_Fileds)
     {
-        return MilvusHelp.queryFields(i_Fileds ,true);
+        return MilvusHelp.queryFields(i_Fileds ,true ,false);
     }
     
     
@@ -960,10 +962,10 @@ public class MilvusHelp implements XJavaID
      * @createDate  2026-08-05
      * @version     v1.0
      *
-     * @param i_TableName      表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
-     * @return
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
+     * @return             Map.key 为全大写的字段名称，Map.value 为原始字段名称
      */
-    public List<String> queryFieldsNotPK(String i_TableName)
+    public Map<String ,String> queryFieldsNotPK(String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
@@ -983,18 +985,18 @@ public class MilvusHelp implements XJavaID
      * @createDate  2026-08-05
      * @version     v1.0
      *
-     * @param i_DBName         库名称。当milvus客户端中配置有库名称时，此值可免填写。
-     * @param i_TableName      表名称，必填项。即：向量库中Collection的名称
-     * @return
+     * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
+     * @return             Map.key 为全大写的字段名称，Map.value 为原始字段名称
      */
-    public List<String> queryFieldsNotPK(String i_DBName ,String i_TableName)
+    public Map<String ,String> queryFieldsNotPK(String i_DBName ,String i_TableName)
     {
         if ( Help.isNull(i_TableName) )
         {
             return null;
         }
         
-        return this.queryFields_Core(i_DBName ,i_TableName ,false);
+        return this.queryFields_Core(i_DBName ,i_TableName ,false ,false);
     }
     
     
@@ -1006,13 +1008,77 @@ public class MilvusHelp implements XJavaID
      * @createDate  2026-08-05
      * @version     v1.0
      *
-     * @param i_DBName         库名称。当milvus客户端中配置有库名称时，此值可免填写。
-     * @param i_TableName      表名称，必填项。即：向量库中Collection的名称
-     * @return
+     * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
+     * @return             Map.key 为全大写的字段名称，Map.value 为原始字段名称
      */
-    public static List<String> queryFieldsNotPK(List<CreateCollectionReq.FieldSchema> i_Fileds)
+    public static Map<String ,String> queryFieldsNotPK(List<CreateCollectionReq.FieldSchema> i_Fileds)
     {
-        return MilvusHelp.queryFields(i_Fileds ,false);
+        return MilvusHelp.queryFields(i_Fileds ,false ,false);
+    }
+    
+    
+    
+    /**
+     * 查询表中所有向量字段的名称
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-20
+     * @version     v1.0
+     *
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
+     * @return             Map.key 为全大写的字段名称，Map.value 为原始字段名称
+     */
+    public Map<String ,String> queryFieldsVector(String i_TableName)
+    {
+        if ( Help.isNull(i_TableName) )
+        {
+            return null;
+        }
+        
+        String [] v_Names = MilvusHelp.parserDBTableName(i_TableName);
+        return this.queryFieldsVector(v_Names[0] ,v_Names[1]);
+    }
+    
+    
+    
+    /**
+     * 查询表中所有向量字段的名称
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-20
+     * @version     v1.0
+     *
+     * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
+     * @return             Map.key 为全大写的字段名称，Map.value 为原始字段名称
+     */
+    public Map<String ,String> queryFieldsVector(String i_DBName ,String i_TableName)
+    {
+        if ( Help.isNull(i_TableName) )
+        {
+            return null;
+        }
+        
+        return this.queryFields_Core(i_DBName ,i_TableName ,false ,true);
+    }
+    
+    
+    
+    /**
+     * 查询表中所有向量字段的名称
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-20
+     * @version     v1.0
+     *
+     * @param i_DBName     库名称。当milvus客户端中配置有库名称时，此值可免填写。
+     * @param i_TableName  表名称，必填项。即：向量库中Collection的名称
+     * @return             Map.key 为全大写的字段名称，Map.value 为原始字段名称
+     */
+    public static Map<String ,String> queryFieldsVector(List<CreateCollectionReq.FieldSchema> i_Fileds)
+    {
+        return MilvusHelp.queryFields(i_Fileds ,false ,true);
     }
     
     
@@ -1027,9 +1093,10 @@ public class MilvusHelp implements XJavaID
      * @param i_DBName         库名称。当milvus客户端中配置有库名称时，此值可免填写。
      * @param i_TableName      表名称，必填项。即：向量库中Collection的名称
      * @param i_HavePrimaryKey 是否包含主键字段
-     * @return
+     * @param i_OnlyVertor     是否只包含向量字段
+     * @return                 Map.key 为全大写的字段名称，Map.value 为原始字段名称
      */
-    private List<String> queryFields_Core(String i_DBName ,String i_TableName ,boolean i_HavePrimaryKey)
+    private Map<String ,String> queryFields_Core(String i_DBName ,String i_TableName ,boolean i_HavePrimaryKey ,boolean i_OnlyVertor)
     {
         List<CreateCollectionReq.FieldSchema> v_FieldScheams = querySchema(i_DBName ,i_TableName);
         if ( Help.isNull(v_FieldScheams) )
@@ -1037,13 +1104,13 @@ public class MilvusHelp implements XJavaID
             return null;
         }
         
-        return MilvusHelp.queryFields(v_FieldScheams ,i_HavePrimaryKey);
+        return MilvusHelp.queryFields(v_FieldScheams ,i_HavePrimaryKey ,i_OnlyVertor);
     }
     
     
     
     /**
-     * 查询表中所有字段的名称（不包含主键）
+     * 查询表中所有字段的名称
      * 
      * @author      ZhengWei(HY)
      * @createDate  2026-08-05
@@ -1052,9 +1119,73 @@ public class MilvusHelp implements XJavaID
      * @param i_DBName         库名称。当milvus客户端中配置有库名称时，此值可免填写。
      * @param i_TableName      表名称，必填项。即：向量库中Collection的名称
      * @param i_HavePrimaryKey 是否包含主键字段
+     * @param i_OnlyVertor     是否只包含向量字段
+     * @return                 Map.key 为全大写的字段名称，Map.value 为原始字段名称
+     */
+    public static Map<String ,String> queryFields(List<CreateCollectionReq.FieldSchema> i_Fileds ,boolean i_HavePrimaryKey ,boolean i_OnlyVertor)
+    {
+        if ( Help.isNull(i_Fileds) )
+        {
+            return null;
+        }
+        
+        Map<String ,String> v_Ret = new LinkedHashMap<String ,String>();
+        if ( i_OnlyVertor )
+        {
+            for (CreateCollectionReq.FieldSchema v_Field : i_Fileds)
+            {
+                if ( v_Field.getDataType().equals(DataType.BinaryVector)
+                  || v_Field.getDataType().equals(DataType.FloatVector)
+                  || v_Field.getDataType().equals(DataType.Float16Vector)
+                  || v_Field.getDataType().equals(DataType.BFloat16Vector)
+                  || v_Field.getDataType().equals(DataType.SparseFloatVector)
+                  || v_Field.getDataType().equals(DataType.Int8Vector) )
+                {
+                    v_Ret.put(v_Field.getName().toUpperCase() ,v_Field.getName());
+                }
+                else if ( i_HavePrimaryKey && v_Field.getIsPrimaryKey() )
+                {
+                    v_Ret.put(v_Field.getName().toUpperCase() ,v_Field.getName());
+                }
+            }
+        }
+        else if ( i_HavePrimaryKey )
+        {
+            for (CreateCollectionReq.FieldSchema v_Field : i_Fileds)
+            {
+                v_Ret.put(v_Field.getName().toUpperCase() ,v_Field.getName());
+            }
+        }
+        else
+        {
+            for (CreateCollectionReq.FieldSchema v_Field : i_Fileds)
+            {
+                if ( v_Field.getIsPrimaryKey() )
+                {
+                    continue;
+                }
+                v_Ret.put(v_Field.getName().toUpperCase() ,v_Field.getName());
+            }
+        }
+        return v_Ret;
+    }
+    
+    
+    
+    /**
+     * 查询表中所有字段的名称
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-20
+     * @version     v1.0
+     *
+     * @param i_DBName         库名称。当milvus客户端中配置有库名称时，此值可免填写。
+     * @param i_TableName      表名称，必填项。即：向量库中Collection的名称
+     * @param i_HavePrimaryKey 是否包含主键字段
+     * @param i_OnlyVertor     是否只包含向量字段
      * @return
      */
-    private static List<String> queryFields(List<CreateCollectionReq.FieldSchema> i_Fileds ,boolean i_HavePrimaryKey)
+    public static List<String> queryFieldsList(List<CreateCollectionReq.FieldSchema> i_Fileds ,boolean i_HavePrimaryKey ,boolean i_OnlyVertor)
     {
         if ( Help.isNull(i_Fileds) )
         {
@@ -1062,7 +1193,26 @@ public class MilvusHelp implements XJavaID
         }
         
         List<String> v_Ret = new ArrayList<String>();
-        if ( i_HavePrimaryKey )
+        if ( i_OnlyVertor )
+        {
+            for (CreateCollectionReq.FieldSchema v_Field : i_Fileds)
+            {
+                if ( v_Field.getDataType().equals(DataType.BinaryVector)
+                  || v_Field.getDataType().equals(DataType.FloatVector)
+                  || v_Field.getDataType().equals(DataType.Float16Vector)
+                  || v_Field.getDataType().equals(DataType.BFloat16Vector)
+                  || v_Field.getDataType().equals(DataType.SparseFloatVector)
+                  || v_Field.getDataType().equals(DataType.Int8Vector) )
+                {
+                    v_Ret.add(v_Field.getName());
+                }
+                else if ( i_HavePrimaryKey && v_Field.getIsPrimaryKey() )
+                {
+                    v_Ret.add(v_Field.getName());
+                }
+            }
+        }
+        else if ( i_HavePrimaryKey )
         {
             for (CreateCollectionReq.FieldSchema v_Field : i_Fileds)
             {
@@ -2264,7 +2414,7 @@ public class MilvusHelp implements XJavaID
         List<String>                          v_SelectFields = i_SelectFields;
         if ( Help.isNull(v_SelectFields) )
         {
-            v_SelectFields = MilvusHelp.queryFields(v_FieldSchemas);
+            v_SelectFields = MilvusHelp.queryFieldsList(v_FieldSchemas ,true ,false);
         }
         if ( !Help.isNull(v_SelectFields) )
         {
@@ -2477,7 +2627,7 @@ public class MilvusHelp implements XJavaID
         List<String>                          v_SelectFields = i_SelectFields;
         if ( Help.isNull(v_SelectFields) )
         {
-            v_SelectFields = MilvusHelp.queryFields(v_FieldSchemas);
+            v_SelectFields = MilvusHelp.queryFieldsList(v_FieldSchemas ,true ,false);
         }
         if ( !Help.isNull(v_SelectFields) )
         {
