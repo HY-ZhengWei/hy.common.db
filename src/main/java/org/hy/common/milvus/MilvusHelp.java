@@ -32,6 +32,7 @@ import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.common.DataType;
 import io.milvus.v2.common.IndexParam;
 import io.milvus.v2.common.IndexParam.IndexParamBuilder;
+import io.milvus.v2.common.IndexParam.IndexType;
 import io.milvus.v2.service.collection.request.AddFieldReq;
 import io.milvus.v2.service.collection.request.AddFieldReq.AddFieldReqBuilder;
 import io.milvus.v2.service.collection.request.CreateCollectionReq;
@@ -136,32 +137,25 @@ public class MilvusHelp implements XJavaID
     {
         super();
         this.setMilvus(i_Milvus);
-        
-        if ( i_TimeoutMS != null && i_TimeoutMS > 0 )
-        {
-            this.timeout = i_TimeoutMS;
-            this.milvus.withTimeout(this.timeout ,TimeUnit.MILLISECONDS);
-        }
-        else
-        {
-            this.timeout = null;
-        }
+        this.setTimeout(i_TimeoutMS);
     }
     
     
     
     /**
-     * 整体超时时长（单位：毫秒）
+     * 初始化
      * 
      * @author      ZhengWei(HY)
-     * @createDate  2026-08-17
+     * @createDate  2026-08-24
      * @version     v1.0
      *
-     * @return
      */
-    public Long getTimeout()
+    private synchronized void initTimeout()
     {
-        return this.timeout;
+        if ( this.milvus != null && this.timeout != null && this.timeout > 0 )
+        {
+            this.milvus.withTimeout(this.timeout ,TimeUnit.MILLISECONDS);
+        }
     }
     
     
@@ -271,6 +265,10 @@ public class MilvusHelp implements XJavaID
             }
             if ( !Help.isNull(v_Field.getEnable_analyzer()) )
             {
+                v_FieldReqBuilder.enableMatch(v_Field.getEnable_match());
+            }
+            if ( !Help.isNull(v_Field.getEnable_analyzer()) )
+            {
                 v_FieldReqBuilder.enableAnalyzer(v_Field.getEnable_analyzer());
             }
             if ( v_Field.getAnalyzer_params() != null && !Help.isNull(v_Field.getAnalyzer_params().getType()) )
@@ -282,6 +280,14 @@ public class MilvusHelp implements XJavaID
             if ( !Help.isNull(v_Field.getMax_length()) && v_Field.getMax_length() > 0 )
             {
                 v_FieldReqBuilder.maxLength(v_Field.getMax_length());
+            }
+            if ( !Help.isNull(v_Field.getDim()) && v_Field.getDim() > 0 )
+            {
+                v_FieldReqBuilder.dimension(v_Field.getDim());
+            }
+            if ( v_Field.getDefault_value() != null )
+            {
+                v_FieldReqBuilder.defaultValue(v_Field.getDefault_value());
             }
             
             v_Schema.addField(v_FieldReqBuilder.build());
@@ -313,14 +319,17 @@ public class MilvusHelp implements XJavaID
                 {
                     v_IndexParamBuilder.metricType(v_FIndex.getMetricType());
                 }
-                if ( !Help.isNull(v_FIndex.getIndexParameterPairs()) )
+                if ( !IndexType.AUTOINDEX.equals(v_FIndex.getIndexType()) )
                 {
-                    Map<String ,Object> v_ExtraParams = (Map<String ,Object>) Help.toMap(v_FIndex.getIndexParameterPairs() ,"key" ,"value");
-                    v_ExtraParams.remove("index_type");   // 已通过上面 .indexType()  方法配置，重复配置会报错
-                    v_ExtraParams.remove("metric_type");  // 已通过上面 .metricType() 方法配置，重复配置会报错
-                    if ( !Help.isNull(v_ExtraParams) )
+                    if ( !Help.isNull(v_FIndex.getIndexParameterPairs()) )
                     {
-                        v_IndexParamBuilder.extraParams(v_ExtraParams);
+                        Map<String ,Object> v_ExtraParams = (Map<String ,Object>) Help.toMap(v_FIndex.getIndexParameterPairs() ,"key" ,"value");
+                        v_ExtraParams.remove("index_type");   // 已通过上面 .indexType()  方法配置，重复配置会报错
+                        v_ExtraParams.remove("metric_type");  // 已通过上面 .metricType() 方法配置，重复配置会报错
+                        if ( !Help.isNull(v_ExtraParams) )
+                        {
+                            v_IndexParamBuilder.extraParams(v_ExtraParams);
+                        }
                     }
                 }
                 
@@ -2761,6 +2770,36 @@ public class MilvusHelp implements XJavaID
     public void setMilvus(MilvusClientV2 i_Milvus)
     {
         this.milvus = i_Milvus;
+        this.initTimeout();
+    }
+    
+    
+    
+    /**
+     * 整体超时时长（单位：毫秒）
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-08-17
+     * @version     v1.0
+     *
+     * @return
+     */
+    public Long getTimeout()
+    {
+        return this.timeout;
+    }
+    
+    
+    
+    /**
+     * 设置：整体超时时长（单位：毫秒）
+     * 
+     * @param i_Timeout 整体超时时长（单位：毫秒）
+     */
+    public void setTimeout(Long i_Timeout)
+    {
+        this.timeout = i_Timeout;
+        this.initTimeout();
     }
 
 

@@ -71,8 +71,8 @@ public class JU_Milvus
         XJSON  v_XJson    = new XJSON();
         String v_JsonText = """
                             {
-                              "collection_name": "DemoFullText202608013",
-                              "description": "测试",
+                              "collection_name": "TBookInfo123",
+                              "description": "图书信息表",
                               "fields": [
                                 {
                                   "name": "id",
@@ -84,13 +84,39 @@ public class JU_Milvus
                                   "nullable": false,
                                   "indexes": [
                                     {
-                                      "index_name": "id",
+                                      "index_name": "IDX_BookInfo_ID",
                                       "index_type": "AUTOINDEX",
                                       "indexParameterPairs": [
                                         {
+                                          "key": "index_type",
+                                          "value": "AUTOINDEX"
+                                        },
+                                        {
                                           "key": "mmap.enabled",
                                           "value": "false"
-                                        },
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "name": "bookName",
+                                  "data_type": 21,
+                                  "description": "图书名称",
+                                  "is_primary_key": false,
+                                  "is_partition_key": false,
+                                  "nullable": false,
+                                  "max_length": 200,
+                                  "enable_analyzer": true,
+                                  "analyzer_params": {
+                                    "type": "chinese"
+                                  },
+                                  "enable_match": true,
+                                  "indexes": [
+                                    {
+                                      "index_name": "IDX_BookInfo_BookName",
+                                      "index_type": "AUTOINDEX",
+                                      "indexParameterPairs": [
                                         {
                                           "key": "index_type",
                                           "value": "AUTOINDEX"
@@ -100,30 +126,18 @@ public class JU_Milvus
                                   ]
                                 },
                                 {
-                                  "name": "text",
-                                  "data_type": 21,
-                                  "description": "",
+                                  "name": "BookVector",
+                                  "data_type": 101,
+                                  "description": "图书内容的向量",
                                   "is_primary_key": false,
                                   "is_partition_key": false,
                                   "nullable": false,
-                                  "max_length": 4000,
-                                  "enable_analyzer": true,
-                                  "analyzer_params": {
-                                    "type": "standard"
-                                  }
-                                },
-                                {
-                                  "name": "sparseVector",
-                                  "data_type": 104,
-                                  "description": "",
-                                  "is_primary_key": false,
-                                  "is_partition_key": false,
-                                  "nullable": false,
+                                  "dim": 2,
                                   "indexes": [
                                     {
-                                      "index_name": "sparseVector",
+                                      "index_name": "IDX_BookInfo_BookVector",
                                       "index_type": "AUTOINDEX",
-                                      "metric_type": "BM25",
+                                      "metric_type": "COSINE",
                                       "indexParameterPairs": [
                                         {
                                           "key": "index_type",
@@ -131,32 +145,23 @@ public class JU_Milvus
                                         },
                                         {
                                           "key": "metric_type",
-                                          "value": "BM25"
+                                          "value": "COSINE"
+                                        },
+                                        {
+                                          "key": "mmap.enabled",
+                                          "value": "false"
                                         }
                                       ]
                                     }
                                   ]
                                 }
                               ],
-                              "functions": [
-                                {
-                                  "name": "textbm25_emb",
-                                  "description": "",
-                                  "type": 1,
-                                  "input_field_names": [
-                                    "text"
-                                  ],
-                                  "output_field_names": [
-                                    "sparseVector"
-                                  ],
-                                  "params": []
-                                }
-                              ],
+                              "functions": [],
                               "consistency_level": "Bounded",
                               "shards_num": 1,
                               "enableDynamicField": false,
                               "properties": {
-                                "timezone": "Asia/Shanghai"
+                                "timezone": "UTC"
                               }
                             }
                             """;

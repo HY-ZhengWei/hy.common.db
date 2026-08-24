@@ -46,6 +46,9 @@ public class Field
     /** 是否允许空 */
     private Boolean          nullable;
     
+    /** 是否启用匹配 */
+    private Boolean          enable_match;
+    
     /** 是否启动分析器 */
     private Boolean          enable_analyzer;
     
@@ -54,6 +57,12 @@ public class Field
     
     /** 最大长度（用于VarChar类型的字段） */
     private Integer          max_length;
+    
+    /** 向量维度的长度 */
+    private Integer          dim;
+    
+    /** 默认值 */
+    private Object           default_value;
     
     /** 字段索引列表 */
     private List<FieldIndex> indexes;
@@ -275,8 +284,28 @@ public class Field
     {
         this.nullable = i_Nullable;
     }
+    
+    
+    /**
+     * 获取：是否启用匹配
+     */
+    public Boolean getEnable_match()
+    {
+        return enable_match;
+    }
 
     
+    /**
+     * 设置：是否启用匹配
+     * 
+     * @param i_Enable_match 是否启用匹配
+     */
+    public void setEnable_match(Boolean i_Enable_match)
+    {
+        this.enable_match = i_Enable_match;
+    }
+
+
     /**
      * 获取：是否启动全文检索分析器
      */
@@ -337,6 +366,46 @@ public class Field
     }
 
     
+    /**
+     * 获取：向量维度的长度
+     */
+    public Integer getDim()
+    {
+        return dim;
+    }
+
+    
+    /**
+     * 设置：向量维度的长度
+     * 
+     * @param i_Dim 向量维度的长度
+     */
+    public void setDim(Integer i_Dim)
+    {
+        this.dim = i_Dim;
+    }
+
+    
+    /**
+     * 获取：默认值
+     */
+    public Object getDefault_value()
+    {
+        return default_value;
+    }
+
+    
+    /**
+     * 设置：默认值
+     * 
+     * @param i_Default_value 默认值
+     */
+    public void setDefault_value(Object i_Default_value)
+    {
+        this.default_value = i_Default_value;
+    }
+
+
     /**
      * 获取：字段索引列表
      */
