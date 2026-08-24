@@ -1282,11 +1282,11 @@ class MilvusContentFillDefault implements MilvusContentFill ,Serializable
     {
         try
         {
-            return StringHelp.replaceFirst(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,i_Value);
+            return StringHelp.replaceFirst(i_Info ,MilvusContent.$Placeholder + i_PlaceHolder ,i_Value);
         }
         catch (Exception exce)
         {
-            return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+            return StringHelp.replaceAll(i_Info ,MilvusContent.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
         }
     }
     
@@ -1333,11 +1333,11 @@ class MilvusContentFillDefault implements MilvusContentFill ,Serializable
     {
         try
         {
-            return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,i_Value);
+            return StringHelp.replaceAll(i_Info ,MilvusContent.$Placeholder + i_PlaceHolder ,i_Value);
         }
         catch (Exception exce)
         {
-            return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+            return StringHelp.replaceAll(i_Info ,MilvusContent.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
         }
     }
     
@@ -1386,11 +1386,11 @@ class MilvusContentFillDefault implements MilvusContentFill ,Serializable
     {
         try
         {
-            return StringHelp.replaceAll(i_Info ,"'" + DBSQL.$Placeholder + i_PlaceHolder + "'" ,i_Value);
+            return StringHelp.replaceAll(i_Info ,"'" + MilvusContent.$Placeholder + i_PlaceHolder + "'" ,i_Value);
         }
         catch (Exception exce)
         {
-            return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
+            return StringHelp.replaceAll(i_Info ,MilvusContent.$Placeholder + i_PlaceHolder ,Matcher.quoteReplacement(i_Value));
         }
     }
     
@@ -1434,7 +1434,7 @@ class MilvusContentFillDefault implements MilvusContentFill ,Serializable
     @Override
     public String fillSpace(String i_Info ,String i_PlaceHolder)
     {
-        return StringHelp.replaceAll(i_Info ,DBSQL.$Placeholder + i_PlaceHolder ,"");
+        return StringHelp.replaceAll(i_Info ,MilvusContent.$Placeholder + i_PlaceHolder ,"");
     }
     
 }

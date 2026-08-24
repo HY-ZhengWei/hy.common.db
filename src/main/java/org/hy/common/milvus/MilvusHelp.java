@@ -1679,7 +1679,7 @@ public class MilvusHelp implements XJavaID
      *
      * @param i_TableName      表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
      * @param i_PartitionName  分区名称。可选项
-     * @param i_Filter         通过筛选条件删除，仅对标题字段有效。可选项
+     * @param i_Filter         通过筛选条件删除，仅对标量字段有效。可选项
      * @return                 返回操作数据的数量，异常时返回-1。
      */
     public long deletes(String i_TableName ,String i_Filter)
@@ -1721,7 +1721,7 @@ public class MilvusHelp implements XJavaID
      *
      * @param i_TableName      表名称，必填项。即：向量库中Collection的名称。同时支持：库名称.表名称
      * @param i_PartitionName  分区名称。可选项
-     * @param i_Filter         通过筛选条件删除，仅对标题字段有效。可选项
+     * @param i_Filter         通过筛选条件删除，仅对标量字段有效。可选项
      * @return                 返回操作数据的数量，异常时返回-1。
      */
     public long deletes(String i_TableName ,String i_PartitionName ,String i_Filter)
@@ -1777,7 +1777,7 @@ public class MilvusHelp implements XJavaID
      * @param i_TableName      表名称，必填项。即：向量库中Collection的名称
      * @param i_PartitionName  分区名称。可选项
      * @param i_IDs            主键数据。可选项
-     * @param i_Filter         通过筛选条件删除，仅对标题字段有效。可选项
+     * @param i_Filter         通过筛选条件删除，仅对标量字段有效。可选项
      * @return                 返回操作数据的数量，异常时返回-1。
      */
     private long delete_Core(String i_DBName ,String i_TableName ,String i_PartitionName ,List<Object> i_IDs ,String i_Filter)
