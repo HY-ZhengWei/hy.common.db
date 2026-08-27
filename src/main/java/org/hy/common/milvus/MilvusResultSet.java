@@ -327,6 +327,22 @@ public class MilvusResultSet
             {
                 return (Integer) v_Value;
             }
+            else if ( Long.class.equals(v_Calss) || long.class.equals(v_Calss) )
+            {
+                return ((Long) v_Value).intValue();
+            }
+            else if ( Float.class.equals(v_Calss) || float.class.equals(v_Calss) )
+            {
+                return ((Float) v_Value).intValue();
+            }
+            else if ( Double.class.equals(v_Calss) || double.class.equals(v_Calss) )
+            {
+                return ((Double) v_Value).intValue();
+            }
+            else if ( Short.class.equals(v_Calss) || short.class.equals(v_Calss) )
+            {
+                return ((Short) v_Value).intValue();
+            }
             else if ( String.class.equals(v_Calss) )
             {
                 return Integer.parseInt(v_Value.toString());
@@ -364,9 +380,25 @@ public class MilvusResultSet
         else
         {
             Class<?> v_Calss = v_Value.getClass();
-            if ( Float.class.equals(v_Calss) || float.class.equals(v_Calss) )
+            if ( Integer.class.equals(v_Calss) || int.class.equals(v_Calss) )
+            {
+                return ((Integer) v_Value).floatValue();
+            }
+            else if ( Long.class.equals(v_Calss) || long.class.equals(v_Calss) )
+            {
+                return ((Long) v_Value).floatValue();
+            }
+            else if ( Float.class.equals(v_Calss) || float.class.equals(v_Calss) )
             {
                 return (Float) v_Value;
+            }
+            else if ( Double.class.equals(v_Calss) || double.class.equals(v_Calss) )
+            {
+                return ((Double) v_Value).floatValue();
+            }
+            else if ( Short.class.equals(v_Calss) || short.class.equals(v_Calss) )
+            {
+                return ((Short) v_Value).floatValue();
             }
             else if ( String.class.equals(v_Calss) )
             {
@@ -407,9 +439,25 @@ public class MilvusResultSet
         else
         {
             Class<?> v_Calss = v_Value.getClass();
-            if ( Double.class.equals(v_Calss) || double.class.equals(v_Calss) )
+            if ( Integer.class.equals(v_Calss) || int.class.equals(v_Calss) )
+            {
+                return ((Integer) v_Value).doubleValue();
+            }
+            else if ( Long.class.equals(v_Calss) || long.class.equals(v_Calss) )
+            {
+                return ((Long) v_Value).doubleValue();
+            }
+            else if ( Float.class.equals(v_Calss) || float.class.equals(v_Calss) )
+            {
+                return ((Float) v_Value).doubleValue();
+            }
+            else if ( Double.class.equals(v_Calss) || double.class.equals(v_Calss) )
             {
                 return (Double) v_Value;
+            }
+            else if ( Short.class.equals(v_Calss) || short.class.equals(v_Calss) )
+            {
+                return ((Short) v_Value).doubleValue();
             }
             else if ( String.class.equals(v_Calss) )
             {
@@ -450,9 +498,25 @@ public class MilvusResultSet
         else
         {
             Class<?> v_Calss = v_Value.getClass();
-            if ( Long.class.equals(v_Calss) || long.class.equals(v_Calss) )
+            if ( Integer.class.equals(v_Calss) || int.class.equals(v_Calss) )
+            {
+                return ((Integer) v_Value).longValue();
+            }
+            else if ( Long.class.equals(v_Calss) || long.class.equals(v_Calss) )
             {
                 return (Long) v_Value;
+            }
+            else if ( Float.class.equals(v_Calss) || float.class.equals(v_Calss) )
+            {
+                return ((Float) v_Value).longValue();
+            }
+            else if ( Double.class.equals(v_Calss) || double.class.equals(v_Calss) )
+            {
+                return ((Double) v_Value).longValue();
+            }
+            else if ( Short.class.equals(v_Calss) || short.class.equals(v_Calss) )
+            {
+                return ((Short) v_Value).longValue();
             }
             else if ( String.class.equals(v_Calss) )
             {
@@ -493,7 +557,23 @@ public class MilvusResultSet
         else
         {
             Class<?> v_Calss = v_Value.getClass();
-            if ( Short.class.equals(v_Calss) || short.class.equals(v_Calss) )
+            if ( Integer.class.equals(v_Calss) || int.class.equals(v_Calss) )
+            {
+                return ((Integer) v_Value).shortValue();
+            }
+            else if ( Long.class.equals(v_Calss) || long.class.equals(v_Calss) )
+            {
+                return ((Long) v_Value).shortValue();
+            }
+            else if ( Float.class.equals(v_Calss) || float.class.equals(v_Calss) )
+            {
+                return ((Float) v_Value).shortValue();
+            }
+            else if ( Double.class.equals(v_Calss) || double.class.equals(v_Calss) )
+            {
+                return ((Double) v_Value).shortValue();
+            }
+            else if ( Short.class.equals(v_Calss) || short.class.equals(v_Calss) )
             {
                 return (Short) v_Value;
             }
@@ -583,6 +663,26 @@ public class MilvusResultSet
             {
                 return (Boolean) v_Value;
             }
+            else if ( Integer.class.equals(v_Calss) || int.class.equals(v_Calss) )
+            {
+                return ((Integer) v_Value) >= 1;
+            }
+            else if ( Long.class.equals(v_Calss) || long.class.equals(v_Calss) )
+            {
+                return ((Long) v_Value) >= 1;
+            }
+            else if ( Float.class.equals(v_Calss) || float.class.equals(v_Calss) )
+            {
+                return ((Float) v_Value) >= 1;
+            }
+            else if ( Double.class.equals(v_Calss) || double.class.equals(v_Calss) )
+            {
+                return ((Double) v_Value) >= 1;
+            }
+            else if ( Short.class.equals(v_Calss) || short.class.equals(v_Calss) )
+            {
+                return ((Short) v_Value) >= 1;
+            }
             else if ( String.class.equals(v_Calss) )
             {
                 return Boolean.parseBoolean(v_Value.toString());
@@ -637,6 +737,10 @@ public class MilvusResultSet
             else if ( Double.class.equals(v_Calss) || double.class.equals(v_Calss) )
             {
                 return new BigDecimal((Double) v_Value);
+            }
+            else if ( Short.class.equals(v_Calss) || short.class.equals(v_Calss) )
+            {
+                return new BigDecimal((Short) v_Value);
             }
             else if ( String.class.equals(v_Calss) )
             {

@@ -115,11 +115,12 @@ public class MilvusContent implements Serializable
      */
     public MilvusContent()
     {
-        this.contentText      = "";
-        this.segments         = new ArrayList<DBSQL_Split>();
-        this.conditions       = new HashMap<String ,DBConditions>();
-        this.defaultNull      = false;
-        this.defaultDB        = false;
+        this.contentText       = "";
+        this.milvusContentFill = MilvusContentFillDefault.getInstance();
+        this.segments          = new ArrayList<DBSQL_Split>();
+        this.conditions        = new HashMap<String ,DBConditions>();
+        this.defaultNull       = false;
+        this.defaultDB         = false;
         this.setNotPlaceholders("MI,SS,mi,ss,mm");
     }
     
@@ -530,7 +531,7 @@ public class MilvusContent implements Serializable
                     {
                         Object       v_MapValue       = null;
                         DBConditions v_ConditionGroup = Help.getValueIgnoreCase(this.conditions ,v_PlaceHolder);
-                        boolean      v_IsCValue       = false;
+                        boolean      v_IsCValue       = false;  // 是否为条件
                         if ( v_ConditionGroup != null )
                         {
                             // 占位符取值条件  ZhengWei(HY) Add 2026-08-19
@@ -627,15 +628,37 @@ public class MilvusContent implements Serializable
                             }
                             else
                             {
-                                if ( !this.isSafeCheck() || MilvusContentSafe.isSafe(v_MapValue.toString()) )
+                                // 如果值是 List 时，转为 [1 ,2 ,3] 格式的数组
+                                //   因为标量查询的 IN 方法也是数组格式，如：VARCHAR not in ["str1", "str2"]
+                                //   向量查询也是相同的数组格式，所以转字符串的值左右两侧默认拼接 [] 号括号
+                                String v_Value = "";
+                                if ( MethodReflect.isExtendImplement(v_MapValue ,List.class) )
                                 {
-                                    if ( v_IsCValue )
+                                    List<?> v_List = (List<?>) v_MapValue;
+                                    if ( MethodReflect.isExtendImplement(v_List.get(0) ,Number.class)  )
                                     {
-                                        v_Info = this.milvusContentFill.onlyFillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString());
+                                        v_Value = "[" + StringHelp.toString(v_List ,"")   + "]";
                                     }
                                     else
                                     {
-                                        v_Info = this.milvusContentFill.fillAll(v_Info ,v_PlaceHolder ,v_MapValue.toString());
+                                        v_Value = "[" + StringHelp.toString(v_List ,"\"") + "]";
+                                    }
+                                }
+                                else
+                                {
+                                    v_Value = v_MapValue.toString();
+                                }
+                                
+                                if ( !this.isSafeCheck() || MilvusContentSafe.isSafe(v_Value) )
+                                {
+                                    if ( v_IsCValue )
+                                    {
+                                        v_Info = this.milvusContentFill.onlyFillAll(v_Info ,v_PlaceHolder ,v_Value);
+                                    }
+                                    else
+                                    {
+                                        // TODO
+                                        v_Info = this.milvusContentFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
                                     }
                                     v_ReplaceCount++;
                                 }
