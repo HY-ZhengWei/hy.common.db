@@ -95,7 +95,7 @@
         <dependency>
             <groupId>cn.openapis</groupId>
             <artifactId>hy.common.xjava</artifactId>
-            <version>4.9.7</version>
+            <version>4.9.8</version>
             <scope>test</scope>
         </dependency>
         
