@@ -2,6 +2,7 @@ package org.hy.common.milvus;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -632,7 +633,20 @@ public class MilvusContent implements Serializable
                                 //   因为标量查询的 IN 方法也是数组格式，如：VARCHAR not in ["str1", "str2"]
                                 //   向量查询也是相同的数组格式，所以转字符串的值左右两侧默认拼接 [] 号括号
                                 String v_Value = "";
-                                if ( MethodReflect.isExtendImplement(v_MapValue ,List.class) )
+                                if ( v_MapValue.getClass().isArray() )
+                                {
+                                    List<Object> v_List = Help.toListByArray(v_MapValue);
+                                    if ( MethodReflect.isExtendImplement(v_List.get(0) ,Number.class)  )
+                                    {
+                                        v_Value = "[" + StringHelp.toString(v_List ,"")   + "]";
+                                    }
+                                    else
+                                    {
+                                        v_Value = "[" + StringHelp.toString(v_List ,"\"") + "]";
+                                    }
+                                    v_List.clear();
+                                }
+                                else if ( MethodReflect.isExtendImplement(v_MapValue ,List.class) )
                                 {
                                     List<?> v_List = (List<?>) v_MapValue;
                                     if ( MethodReflect.isExtendImplement(v_List.get(0) ,Number.class)  )
@@ -642,6 +656,30 @@ public class MilvusContent implements Serializable
                                     else
                                     {
                                         v_Value = "[" + StringHelp.toString(v_List ,"\"") + "]";
+                                    }
+                                }
+                                else if ( MethodReflect.isExtendImplement(v_MapValue ,Set.class) )
+                                {
+                                    Set<?> v_Set = (Set<?>) v_MapValue;
+                                    if ( MethodReflect.isExtendImplement(v_Set.iterator().next() ,Number.class)  )
+                                    {
+                                        v_Value = "[" + StringHelp.toString(v_Set ,"")   + "]";
+                                    }
+                                    else
+                                    {
+                                        v_Value = "[" + StringHelp.toString(v_Set ,"\"") + "]";
+                                    }
+                                }
+                                else if ( MethodReflect.isExtendImplement(v_MapValue ,Collection.class) )
+                                {
+                                    Collection<?> v_Collection = (Collection<?>) v_MapValue;
+                                    if ( MethodReflect.isExtendImplement(v_Collection.iterator().next() ,Number.class)  )
+                                    {
+                                        v_Value = "[" + StringHelp.toString(v_Collection ,"")   + "]";
+                                    }
+                                    else
+                                    {
+                                        v_Value = "[" + StringHelp.toString(v_Collection ,"\"") + "]";
                                     }
                                 }
                                 else
@@ -657,7 +695,6 @@ public class MilvusContent implements Serializable
                                     }
                                     else
                                     {
-                                        // TODO
                                         v_Info = this.milvusContentFill.fillAll(v_Info ,v_PlaceHolder ,v_Value);
                                     }
                                     v_ReplaceCount++;
