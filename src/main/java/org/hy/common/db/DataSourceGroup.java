@@ -38,6 +38,7 @@ import org.hy.common.xml.log.Logger;
  *              v8.0   2023-04-18  添加：MariaDB数据库类型的识别
  *              v9.0   2024-08-29  添加：获取指定索引号的数据库连接池
  *              v10.0  2026-04-13  添加：国产达梦数据库的类型
+ *              v11.0  2026-09-04  添加：国产时序数据库Apache IoTDB
  */
 public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJavaID ,Serializable
 {
@@ -60,6 +61,8 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     public static  final String $DBType_PostgreSQL = "POSTGRESQL";
     
     public static  final String $DBType_DaMeng     = "DAMENG";
+    
+    public static  final String $DBType_IoTDB      = "IOTDB";
     
     
     
@@ -322,6 +325,10 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
             else if ( v_DBName.indexOf("DM DBMS") >= 0 )
             {
                 this.dbProductType = $DBType_DaMeng;
+            }
+            else if ( v_DBName.indexOf("IOTDB") >= 0 )
+            {
+                this.dbProductType = $DBType_IoTDB;
             }
             else
             {
