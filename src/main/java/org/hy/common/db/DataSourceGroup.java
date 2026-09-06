@@ -3,6 +3,8 @@ package org.hy.common.db;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.sql.DatabaseMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,6 +41,7 @@ import org.hy.common.xml.log.Logger;
  *              v9.0   2024-08-29  添加：获取指定索引号的数据库连接池
  *              v10.0  2026-04-13  添加：国产达梦数据库的类型
  *              v11.0  2026-09-04  添加：国产时序数据库Apache IoTDB
+ *              v11.1  2026-09-06  添加：初始化会话。即，每次获取每连接时，初始化执行SQL语句。多个SQL语句间用 $Executes_Split 分隔
  */
 public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJavaID ,Serializable
 {
@@ -63,6 +66,9 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     public static  final String $DBType_DaMeng     = "DAMENG";
     
     public static  final String $DBType_IoTDB      = "IOTDB";
+    
+    /** 执行多条SQL语句的分割符 */
+    public static  final String $Executes_Split    = ";/";
     
     
     
@@ -111,6 +117,9 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     /** 注释。可用于日志的输出等帮助性的信息 */
     private String             comment;
     
+    /** 初始化会话。即，每次获取每连接时，初始化执行SQL语句。多个SQL语句间用 $Executes_Split 分隔 */
+    private String             initSession;
+    
     
     
     public DataSourceGroup()
@@ -123,6 +132,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
         this.connLastTime    = null;
         this.connActiveCount = 0;
         this.connMaxUseCount = 0;
+        this.initSession     = null;
     }
     
     
@@ -221,7 +231,7 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
                 this.isException  = false;
                 this.connLastTime = new Date();
                 
-                return v_Conn;
+                return this.initSession(v_Conn);
             }
             catch (Exception exce)
             {
@@ -240,6 +250,83 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
             new Execute(this ,"allowReconnection").startDelayed(10 * 1000);
         }
         return null;
+    }
+    
+    
+    
+    /**
+     * 初始化会话。即，每次获取每连接时，初始化执行SQL语句。多个SQL语句间用 $Executes_Split 分隔
+     * 
+     * @author      ZhengWei(HY)
+     * @createDate  2026-09-06
+     * @version     v1.0
+     *
+     * @param i_Conn  数据库连接
+     * @throws SQLException 
+     */
+    private Connection initSession(Connection i_Conn) throws SQLException
+    {
+        if ( Help.isNull(this.initSession) )
+        {
+            return i_Conn;
+        }
+        
+        Statement v_Statement = null;
+        try
+        {
+            v_Statement = i_Conn.createStatement();
+            String [] v_SQLs = this.initSession.split(DataSourceGroup.$Executes_Split);
+            for (int i=0; i<v_SQLs.length; i++)
+            {
+                String v_SQL = v_SQLs[i].trim();
+                v_Statement.execute(v_SQL);
+                
+                if ( v_SQLs.length > 1 )
+                {
+                    $Logger.debug("Init session[" + (i + 1) + "/" + v_SQLs.length + "]：" + v_SQL);
+                }
+                else
+                {
+                    $Logger.debug("Init session：" + v_SQL);
+                }
+            }
+        }
+        catch (Exception exce)
+        {
+            if ( v_Statement != null )
+            {
+                try
+                {
+                    v_Statement.close();
+                }
+                catch (Exception e)
+                {
+                    $Logger.error(e);
+                }
+                v_Statement = null;
+            }
+            
+            // 出现异常时关闭数据库连接
+            i_Conn.close();
+            throw exce;
+        }
+        finally
+        {
+            if ( v_Statement != null )
+            {
+                try
+                {
+                    v_Statement.close();
+                }
+                catch (Exception e)
+                {
+                    $Logger.error(e);
+                }
+                v_Statement = null;
+            }
+        }
+        
+        return i_Conn; 
     }
     
     
@@ -382,6 +469,28 @@ public final class DataSourceGroup implements Comparable<DataSourceGroup> ,XJava
     public int size()
     {
         return this.dataSources.size();
+    }
+    
+    
+    
+    /**
+     * 获取：初始化会话。即，每次获取每连接时，初始化执行SQL语句。多个SQL语句间用 $Executes_Split 分隔
+     */
+    public String getInitSession()
+    {
+        return this.initSession;
+    }
+
+    
+    
+    /**
+     * 设置：初始化会话。即，每次获取每连接时，初始化执行SQL语句。多个SQL语句间用 $Executes_Split 分隔
+     * 
+     * @param isException
+     */
+    public void setInitSession(String i_InitSession)
+    {
+        this.initSession = i_InitSession;
     }
     
     
