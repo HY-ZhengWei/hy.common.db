@@ -59,7 +59,7 @@ public class DBTableBigger implements FileBiggerMemory
         int v_ColCount = i_ResultSet.getMetaData().getColumnCount();
         for (int v_ColIndex=1; v_ColIndex<=v_ColCount; v_ColIndex++)
         {
-            this.dbTable.addColumnInfo(v_ColIndex - 1,i_ResultSet.getMetaData().getColumnName(v_ColIndex));
+            this.dbTable.addColumnInfo(v_ColIndex - 1 ,i_ResultSet.getMetaData().getColumnLabel(v_ColIndex));
         }
     }
     

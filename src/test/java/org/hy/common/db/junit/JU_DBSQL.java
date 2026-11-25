@@ -1,6 +1,8 @@
 package org.hy.common.db.junit;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.hy.common.Date;
 import org.hy.common.Help;
@@ -98,6 +100,29 @@ public class JU_DBSQL
         DBPreparedSQL v_PreparedSQL = v_DBSQL.getPreparedSQL();
         $Logger.info(v_PreparedSQL.getSQL());
         Help.print(v_PreparedSQL.getPlaceholders());
+    }
+    
+    
+    
+    @Test
+    public void test_WhereIn()
+    {
+        Map<String ,Object> v_Data = new HashMap<String ,Object>();
+        
+        v_Data.put("tableName"    ,"表名称");
+        v_Data.put("assetIDs"     ,"'123' ,'456'");
+        v_Data.put("assetState"   ,1);
+        v_Data.put("updateUserID" ,"ZhengWei(HY)");
+        
+        String v_SQL = """
+                        UPDATE  :tableName
+                           SET  updateTime   = NOW()
+                               ,updateUserID = ':updateUserID'
+                               ,assetState   = :assetState
+                         WHERE  assetID     IN ( :assetIDs )
+                       """;
+        DBSQL v_DBSQL = new DBSQL(v_SQL);
+        $Logger.info(v_DBSQL.getSQL(v_Data ,null));
     }
     
 }

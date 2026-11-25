@@ -70,6 +70,10 @@ public class DBTableMetaData
 //              System.out.print(  i_ResultSetMetaData.getColumnTypeName (v_ColIndex) + "   ");
 //              System.out.println(i_ResultSetMetaData.getColumnClassName(v_ColIndex));
                 
+//              System.out.print  (i_ResultSetMetaData.getColumnName     (v_ColIndex) + "  ");
+//              System.out.print  (i_ResultSetMetaData.getColumnLabel    (v_ColIndex) + "  ");
+//              System.out.println(i_ResultSetMetaData.getColumnClassName(v_ColIndex));
+                
                 // ZhengWei(HY) Edit 修复字段重新别名后，无法XJava的问题 2014-04-02
                 // getColumnName()  与 getColumnLabel() 的区别是：
                 // getColumnName()  为数据库字段的真实名称
